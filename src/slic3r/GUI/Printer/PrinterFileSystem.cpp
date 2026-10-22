@@ -29,6 +29,7 @@
 #include <wx/event.h>
 #include <map>
 #include "slic3r/GUI/Printer/BambuTunnel.h"
+#include "slic3r/GUI/Printer/LanFtpsTunnel.hpp"
 #include <vector>
 #include <cassert>
 #include <utility>
@@ -1607,7 +1608,8 @@ void PrinterFileSystem::RecvMessageThread()
             // OutputDebugStringA("\n");
             wxLogInfo("PrinterFileSystem::SendRequest >>>: \n%s\n", wxString::FromUTF8(msg));
             l.unlock();
-            int n = Bambu_SendMessage(m_session.tunnel, CTRL_TYPE, msg.c_str(), msg.length());
+            int n = m_session.lan_ftps ? Slic3r::LanFtps::send_message(m_session.tunnel, CTRL_TYPE, msg.c_str(), msg.length()) :
+                                         Bambu_SendMessage(m_session.tunnel, CTRL_TYPE, msg.c_str(), msg.length());
             l.lock();
             if (n == 0)
                 m_messages.pop_front();
@@ -1617,7 +1619,8 @@ void PrinterFileSystem::RecvMessageThread()
             }
         }
         l.unlock();
-        int n = Bambu_ReadSample(m_session.tunnel, &sample);
+        int n = m_session.lan_ftps ? Slic3r::LanFtps::read_sample(m_session.tunnel, &sample) :
+                                     Bambu_ReadSample(m_session.tunnel, &sample);
         l.lock();
         if (n == 0) {
             HandleResponse(l, sample);
@@ -1710,11 +1713,18 @@ void PrinterFileSystem::Reconnect(boost::unique_lock<boost::mutex> &l, int resul
 {
     if (m_session.tunnel) {
         auto tunnel = m_session.tunnel;
+        bool lan_ftps = m_session.lan_ftps;
         m_session.tunnel = nullptr;
+        m_session.lan_ftps = false;
         wxLogMessage("PrinterFileSystem::Reconnect close %d", result);
         l.unlock();
-        Bambu_Close(tunnel);
-        Bambu_Destroy(tunnel);
+        if (lan_ftps) {
+            Slic3r::LanFtps::close(tunnel);
+            Slic3r::LanFtps::destroy(tunnel);
+        } else {
+            Bambu_Close(tunnel);
+            Bambu_Destroy(tunnel);
+        }
         l.lock();
     }
     if (m_session.owner == nullptr)
@@ -1761,14 +1771,23 @@ void PrinterFileSystem::Reconnect(boost::unique_lock<boost::mutex> &l, int resul
             wxLogMessage("PrinterFileSystem::Reconnect Connecting");
             SendChangedEvent(EVT_STATUS_CHANGED, m_status);
             Bambu_Tunnel tunnel = nullptr;
-            int ret = Bambu_Create(&tunnel, url.c_str());
+            // LAN only printers without local file service: storage over FTPS
+            bool lan_ftps = Slic3r::LanFtps::is_url(url.c_str());
+            int ret = lan_ftps ? Slic3r::LanFtps::create(&tunnel, url.c_str()) : Bambu_Create(&tunnel, url.c_str());
             if (ret == 0) {
-
-                Bambu_SetLogger(tunnel, DumpLog, this);
-                ret = Bambu_Open(tunnel);
+                if (lan_ftps) {
+                    ret = Slic3r::LanFtps::open(tunnel);
+                } else {
+                    Bambu_SetLogger(tunnel, DumpLog, this);
+                    ret = Bambu_Open(tunnel);
+                }
             }
 
-            if (ret == 0)
+            if (ret == 0 && lan_ftps)
+            {
+                ret = Slic3r::LanFtps::start_stream(tunnel, CTRL_TYPE);
+            }
+            else if (ret == 0)
             {
                 auto                             start_time = boost::posix_time::microsec_clock::universal_time();
                 boost::posix_time::time_duration timeout    = boost::posix_time::seconds(3);
@@ -1788,6 +1807,7 @@ void PrinterFileSystem::Reconnect(boost::unique_lock<boost::mutex> &l, int resul
             l.lock();
             if (ret == 0) {
                 m_session.tunnel = tunnel;
+                m_session.lan_ftps = lan_ftps;
                 wxLogMessage("PrinterFileSystem::Reconnect Connected");
                 break;
             } else if (ret == 1) {
@@ -1795,8 +1815,13 @@ void PrinterFileSystem::Reconnect(boost::unique_lock<boost::mutex> &l, int resul
                 ret = ERROR_RES_BUSY;
             }
             if (tunnel) {
-                Bambu_Close(tunnel);
-                Bambu_Destroy(tunnel);
+                if (lan_ftps) {
+                    Slic3r::LanFtps::close(tunnel);
+                    Slic3r::LanFtps::destroy(tunnel);
+                } else {
+                    Bambu_Close(tunnel);
+                    Bambu_Destroy(tunnel);
+                }
             }
             m_last_error = ret;
         }

@@ -55,6 +55,10 @@ private:
 
     void fetchUrl(boost::weak_ptr<PrinterFileSystem> fs);
 
+    // LAN only printer without the local file service of the network plug-in (e.g. P1/A1):
+    // browse the storage over FTPS instead
+    bool use_lan_ftps() const { return m_lan_mode && !m_local_proto && !m_lan_ip.empty() && !m_lan_passwd.empty(); }
+
     void doAction(size_t index, int action);
 
 private:

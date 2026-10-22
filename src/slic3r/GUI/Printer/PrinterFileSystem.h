@@ -393,6 +393,7 @@ private:
     struct Session
     {
         Bambu_Tunnel tunnel = nullptr;
+        bool lan_ftps = false; // tunnel is a Slic3r::LanFtps tunnel (FTPS storage access in LAN only mode)
         PrinterFileSystem * owner;
     };
     Session m_session;

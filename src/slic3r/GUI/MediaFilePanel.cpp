@@ -1,4 +1,5 @@
 #include "MediaFilePanel.h"
+#include "Printer/LanFtpsTunnel.hpp"
 #include "ImageGrid.h"
 #include "I18N.hpp"
 #include "GUI_App.hpp"
@@ -253,7 +254,7 @@ void MediaFilePanel::UpdateByObj(MachineObject* obj)
         m_device_busy  = obj->is_camera_busy_off();
         m_local_proto  = obj->file_local;
         m_remote_proto = obj->get_file_remote();
-        m_model_download_support = obj->file_model_download;
+        m_model_download_support = obj->file_model_download || use_lan_ftps();
 
         if (m_sdcard_exist != (obj->GetStorage()->get_sdcard_state() == DevStorage::HAS_SDCARD_NORMAL)) {
             m_sdcard_exist = obj->GetStorage()->get_sdcard_state() == DevStorage::HAS_SDCARD_NORMAL;
@@ -478,6 +479,12 @@ void MediaFilePanel::fetchUrl(boost::weak_ptr<PrinterFileSystem> wfs)
         return;
     }
     m_waiting_enable = false;
+    if (use_lan_ftps()) {
+        m_waiting_support = false;
+        BOOST_LOG_TRIVIAL(info) << "MediaFilePanel::fetchUrl: LAN only, using FTPS";
+        fs->SetUrl(Slic3r::LanFtps::make_url(m_lan_ip, m_lan_user, m_lan_passwd));
+        return;
+    }
     if (!m_local_proto && !m_remote_proto) {
         m_waiting_support = true;
         m_image_grid->SetStatus(m_bmp_failed, _L("Browsing file in storage is not supported in current firmware. Please update the printer firmware."));

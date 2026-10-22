@@ -470,6 +470,8 @@ set(SLIC3R_GUI_SOURCES
     GUI/PrinterCloudAuthDialog.hpp
     GUI/Printer/PrinterFileSystem.cpp
     GUI/Printer/PrinterFileSystem.h
+    GUI/Printer/LanFtpsTunnel.cpp
+    GUI/Printer/LanFtpsTunnel.hpp
     GUI/PrinterWebView.cpp
     GUI/PrinterWebViewHandler.cpp
     GUI/PrinterWebViewHandler.hpp
