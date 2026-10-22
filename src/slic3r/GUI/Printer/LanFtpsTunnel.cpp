@@ -180,7 +180,8 @@ bool parse_list_line(std::string line, Entry &e)
     time_t now = ::time(nullptr);
     if (time_or_year.find(':') != std::string::npos) {
         sscanf(time_or_year.c_str(), "%d:%d", &hour, &minute);
-        // no year given: assume current year, unless that would be more than ~6 months in the future
+        // no year given: the printer does that for files of the last 12 months,
+        // so it is the most recent such date that is not in the future
         std::tm tm_now{};
 #ifdef _WIN32
         gmtime_s(&tm_now, &now);
@@ -188,7 +189,7 @@ bool parse_list_line(std::string line, Entry &e)
         gmtime_r(&now, &tm_now);
 #endif
         year = tm_now.tm_year + 1900;
-        if (make_utc(year, month, d, hour, minute) - now > 190 * 86400)
+        if (make_utc(year, month, d, hour, minute) - now > 2 * 86400) // tolerate clock / time zone offsets
             --year;
     } else {
         year = atoi(time_or_year.c_str());
@@ -364,7 +365,8 @@ private:
         root["result"]   = result;
         root["sequence"] = seq;
         root["reply"]    = reply;
-        std::string s    = root.dump();
+        // file names that are not valid UTF-8 must not break the whole reply
+        std::string s = root.dump(-1, ' ', false, json::error_handler_t::replace);
         s += "\n\n";
         if (size) s.append(data, size);
         std::unique_lock<std::mutex> l(m_mutex);
