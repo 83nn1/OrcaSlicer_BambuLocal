@@ -57,9 +57,15 @@ enum {
     ERROR_PIPE            = 3,
     ERROR_CANCEL          = 4,
     FILE_NO_EXIST         = 10,
+    FILE_NAME_INVALID     = 11,
     FILE_READ_WRITE_ERR   = 14,
     FILE_TYPE_ERR         = 16,
     API_VERSION_UNSUPPORT = 18,
+    STORAGE_SPACE_NOT_ENOUGH = 20,
+    FILE_CREATE_ERR       = 21,
+    FILE_WRITE_ERR        = 22,
+    MD5_COMPARE_ERR       = 23,
+    SEND_ERR              = 25,
 };
 
 constexpr char const *SCHEME          = "lanftps://";
@@ -69,6 +75,9 @@ constexpr size_t      MAX_QUEUED      = 32;
 constexpr uintmax_t   CACHE_MAX_BYTES = 512ull * 1024 * 1024;
 constexpr int         LIST_RESYNC_NOTIFY = 0x0101;
 constexpr uint32_t    NO_REQUEST         = 0xFFFFFFFFu;
+constexpr size_t      UPLOAD_CHUNK_KB    = 256;             // fragment size PrinterFileSystem sends
+constexpr size_t      UPLOAD_QUEUE_MAX   = 4 * 1024 * 1024; // fragments waiting for the FTPS connection
+constexpr int         UPLOAD_WAIT_SECS   = 30;              // no fragment for that long: give up
 
 std::string url_decode(std::string const &s)
 {
@@ -320,7 +329,7 @@ public:
     int send_message(char const *data, int len)
     {
         std::string msg(data, len);
-        std::string param; // optional json after the request, e.g. of a "mem:/" download
+        std::string param; // optional data after the request: json of a "mem:/" download, bytes of an upload
         auto        n = msg.find("\n\n");
         if (n != std::string::npos) {
             param = msg.substr(n + 2);
@@ -329,6 +338,8 @@ public:
         json root;
         try {
             root = json::parse(msg);
+            if (root.value("cmdtype", 0) == FILE_UPLOAD && root["req"].contains("frag_id"))
+                return upload_fragment(root.value("sequence", 0u), root["req"], std::move(param));
             if (!param.empty()) root["param"] = json::parse(param);
         } catch (...) {
             BOOST_LOG_TRIVIAL(warning) << "LanFtps: invalid request";
@@ -345,6 +356,7 @@ public:
                     tasks.push_back(t);
                 }
             }
+            m_cond.notify_all(); // a running upload waits for fragments
             json reply;
             reply["tasks"] = tasks;
             push(seq, SUCCESS, reply, nullptr, 0, false);
@@ -469,6 +481,7 @@ private:
         case SUB_FILE: sub_file(seq, req); break;
         case FILE_DOWNLOAD: file_download(seq, req); break;
         case FILE_DEL: file_delete(seq, req); break;
+        case FILE_UPLOAD: file_upload(seq, req); break;
         case REQUEST_MEDIA_ABILITY: {
             json reply;
             reply["storage"] = json::array({"sdcard"});
@@ -1163,6 +1176,145 @@ private:
         push(seq, result, json::object());
     }
 
+    // ---------------------------------------------------------------- upload
+
+    // PrinterFileSystem uploads in two steps: a FILE_UPLOAD request with name and
+    // size, answered with CONTINUE and the fragment size, then FILE_UPLOAD messages
+    // with "frag_id" and the bytes of one fragment each, the last one with the MD5
+    // of the file. It sends them without waiting for answers, so they are queued
+    // here (send_message returns would_block while the queue is full) and streamed
+    // into one STOR by the worker thread. The file goes to the root of the storage,
+    // where the printer also puts the files sent from Bambu Studio.
+    void file_upload(uint32_t seq, json const &req)
+    {
+        std::string name = file_name_of(req.value("path", ""));
+        if (name.empty() || name.find_first_of("\r\n\\") != std::string::npos) {
+            push(seq, FILE_NAME_INVALID, json::object());
+            return;
+        }
+        std::string path  = "/" + name;
+        uint64_t    total = req.value("total", uint64_t(0));
+        {
+            std::lock_guard<std::mutex> l(m_mutex);
+            m_upload        = Upload{};
+            m_upload.seq    = seq;
+            m_upload.active = true;
+            m_upload.total  = total;
+            MD5_Init(&m_upload.ctx);
+        }
+        push(seq, CONTINUE, json{{"chunk_size", UPLOAD_CHUNK_KB}, {"offset", 0}});
+
+        BOOST_LOG_TRIVIAL(info) << "LanFtps: uploading " << path << " (" << total << " bytes)";
+        prepare(remote_url(path));
+        curl_easy_setopt(m_curl, CURLOPT_UPLOAD, 1L);
+        curl_easy_setopt(m_curl, CURLOPT_READFUNCTION, &Tunnel::read_cb);
+        curl_easy_setopt(m_curl, CURLOPT_READDATA, this);
+        curl_easy_setopt(m_curl, CURLOPT_INFILESIZE_LARGE, curl_off_t(total));
+        CURLcode res  = curl_easy_perform(m_curl);
+        long     code = 0;
+        curl_easy_getinfo(m_curl, CURLINFO_RESPONSE_CODE, &code);
+
+        uint64_t    sent;
+        bool        stopping;
+        std::string md5, expected_md5;
+        {
+            std::lock_guard<std::mutex> l(m_mutex);
+            stopping     = m_stopping;
+            sent         = m_upload.sent;
+            md5          = md5_hex(m_upload.ctx);
+            expected_md5 = m_upload.md5;
+            m_upload     = Upload{};
+        }
+        m_known.erase(path); // the list has to fetch size and time again
+        if (stopping) return;
+
+        int result = 0;
+        if (cancelled()) {
+            result = ERROR_CANCEL;
+        } else if (res != CURLE_OK && sent != total) {
+            BOOST_LOG_TRIVIAL(info) << "LanFtps: STOR " << path << " failed: " << curl_easy_strerror(res) << " (" << code << ")";
+            result = upload_error(res, code);
+        } else {
+            // also catches a data connection closed early, the printer's SIZE tells what arrived
+            uint64_t size = 0;
+            if (remote_size(path, size) != 0 || size != total) {
+                BOOST_LOG_TRIVIAL(info) << "LanFtps: " << path << " has " << size << " of " << total << " bytes after upload";
+                result = SEND_ERR;
+            } else if (!expected_md5.empty() && lower(expected_md5) != lower(md5)) {
+                result = MD5_COMPARE_ERR;
+            }
+        }
+        if (result != 0) {
+            // no partial file on the storage, it would look like a valid job. Nothing
+            // sent: STOR was refused and a file of that name is still the old one.
+            m_seq = NO_REQUEST;
+            if (sent > 0) remove(path);
+            if (result != ERROR_CANCEL) push(seq, result, json::object()); // a cancel was answered already
+            return;
+        }
+        BOOST_LOG_TRIVIAL(info) << "LanFtps: uploaded " << path;
+        push(seq, SUCCESS, json{{"path", path}});
+    }
+
+    int upload_fragment(uint32_t seq, json const &req, std::string data)
+    {
+        std::lock_guard<std::mutex> l(m_mutex);
+        // a fragment of an upload that failed or was cancelled
+        if (!m_upload.active || m_upload.seq != seq || m_upload.failed) return 0;
+        if (m_upload.queued >= UPLOAD_QUEUE_MAX) return Bambu_would_block;
+        if (req.value("offset", uint64_t(0)) != m_upload.received || m_upload.received + data.size() > m_upload.total) {
+            BOOST_LOG_TRIVIAL(warning) << "LanFtps: upload fragment out of order";
+            m_upload.failed = true;
+        } else {
+            MD5_Update(&m_upload.ctx, data.data(), data.size());
+            m_upload.received += data.size();
+            m_upload.queued += data.size();
+            if (req.contains("file_md5")) m_upload.md5 = req["file_md5"].get<std::string>();
+            m_upload.fragments.push_back(std::move(data));
+        }
+        m_cond.notify_all();
+        return 0;
+    }
+
+    static size_t read_cb(char *buffer, size_t size, size_t nitems, void *userdata)
+    {
+        return static_cast<Tunnel *>(userdata)->read_upload(buffer, size * nitems);
+    }
+
+    size_t read_upload(char *buffer, size_t max)
+    {
+        std::unique_lock<std::mutex> l(m_mutex);
+        auto &u     = m_upload;
+        auto  ready = [&] { return m_stopping || m_cancelled.count(u.seq) > 0 || u.failed || !u.fragments.empty() || u.sent == u.total; };
+        if (!m_cond.wait_for(l, std::chrono::seconds(UPLOAD_WAIT_SECS), ready)) {
+            BOOST_LOG_TRIVIAL(warning) << "LanFtps: upload stalled";
+            u.failed = true;
+        }
+        if (m_stopping || m_cancelled.count(u.seq) > 0 || u.failed) return CURL_READFUNC_ABORT;
+        if (u.fragments.empty()) return 0; // all sent
+        auto  &front = u.fragments.front();
+        size_t n     = (std::min)(max, front.size() - u.front_offset);
+        memcpy(buffer, front.data() + u.front_offset, n);
+        u.front_offset += n;
+        u.sent += n;
+        u.queued -= n;
+        if (u.front_offset == front.size()) {
+            u.fragments.pop_front();
+            u.front_offset = 0;
+        }
+        return n;
+    }
+
+    int upload_error(CURLcode res, long code) const
+    {
+        if (cancelled()) return ERROR_CANCEL;
+        if (res == CURLE_ABORTED_BY_CALLBACK) return SEND_ERR; // fragments stopped coming or were wrong
+        if (code == 452 || code == 552) return STORAGE_SPACE_NOT_ENOUGH;
+        if (res == CURLE_UPLOAD_FAILED || res == CURLE_REMOTE_ACCESS_DENIED) return code == 550 || code == 553 ? FILE_CREATE_ERR : FILE_WRITE_ERR;
+        int e = map_error(res);
+        return e == FILE_NO_EXIST ? FILE_WRITE_ERR : e;
+    }
+
     // ---------------------------------------------------------------- part skip
 
     // A "get_project_file" request (FILE_DOWNLOAD of "mem:/<n>" with a json param)
@@ -1304,6 +1456,22 @@ private:
     std::thread             m_worker;
 
     std::map<std::string, Entry> m_known; // worker thread only
+
+    // the upload in progress, guarded by m_mutex
+    struct Upload
+    {
+        uint32_t                seq    = NO_REQUEST;
+        bool                    active = false;
+        bool                    failed = false;
+        uint64_t                total    = 0;
+        uint64_t                received = 0; // queued by send_message
+        uint64_t                sent     = 0; // handed to curl
+        size_t                  queued   = 0;
+        std::deque<std::string> fragments;
+        size_t                  front_offset = 0;
+        MD5_CTX                 ctx;
+        std::string             md5; // sent with the last fragment
+    } m_upload;
 
     // job file of the part skip dialog, worker thread only
     std::string                           m_job_path;

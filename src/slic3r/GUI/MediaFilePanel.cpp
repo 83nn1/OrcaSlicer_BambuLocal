@@ -26,6 +26,7 @@
 #include <libslic3r/Format/bbs_3mf.hpp>
 #include <wx/panel.h>
 #include <wx/event.h>
+#include <wx/filedlg.h>
 #include "slic3r/GUI/wxExtensions.hpp"
 #include <wx/gdicmn.h>
 #include <utility>
@@ -137,6 +138,8 @@ MediaFilePanel::MediaFilePanel(wxWindow * parent)
     m_button_management->SetToolTip(_L("Batch manage files."));
     m_button_refresh = new ::Button(m_manage_panel, _L("Refresh"));
     m_button_refresh->SetToolTip(_L("Reload file list from printer."));
+    m_button_upload = new ::Button(m_manage_panel, _L("Upload"));
+    m_button_upload->SetToolTip(_L("Upload a sliced file from this computer to the printer's storage."));
     // Order of PrinterFileSystem::SortMode
     m_sort_box = new ::ComboBox(m_manage_panel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(FromDIP(170), -1), 0, nullptr, wxCB_READONLY);
     m_sort_box->Append(_L("Newest first"));
@@ -145,7 +148,7 @@ MediaFilePanel::MediaFilePanel(wxWindow * parent)
     m_sort_box->Append(_L("Name (Z to A)"));
     m_sort_box->SetFont(Label::Body_12);
     m_sort_box->SetToolTip(_L("Sort order of the files."));
-    for (auto b : {m_button_delete, m_button_download, m_button_refresh, m_button_management}) {
+    for (auto b : {m_button_delete, m_button_download, m_button_refresh, m_button_management, m_button_upload}) {
         b->SetFont(Label::Body_12);
         b->SetCornerRadius(12);
         b->SetPaddingSize({10, 6});
@@ -161,11 +164,16 @@ MediaFilePanel::MediaFilePanel(wxWindow * parent)
     m_button_refresh->SetBackgroundColorNormal(wxColor("#009688"));
     m_button_refresh->SetTextColorNormal(*wxWHITE);
     m_button_refresh->Enable(false);
+    m_button_upload->SetBorderWidth(0);
+    m_button_upload->SetBackgroundColorNormal(wxColor("#009688"));
+    m_button_upload->SetTextColorNormal(*wxWHITE);
+    m_button_upload->Enable(false);
 
     wxBoxSizer *manage_sizer = new wxBoxSizer(wxHORIZONTAL);
     manage_sizer->AddStretchSpacer(1);
     manage_sizer->Add(m_button_download, 0, wxALIGN_CENTER_VERTICAL)->Show(false);
     manage_sizer->Add(m_button_delete, 0, wxALIGN_CENTER_VERTICAL | wxLEFT | wxRIGHT, 24)->Show(false);
+    manage_sizer->Add(m_button_upload, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(12))->Show(false);
     manage_sizer->Add(m_sort_box, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(12));
     manage_sizer->Add(m_button_refresh, 0, wxALIGN_CENTER_VERTICAL);
     manage_sizer->Add(m_button_management, 0, wxALIGN_CENTER_VERTICAL | wxLEFT | wxRIGHT, 24);
@@ -241,6 +249,10 @@ MediaFilePanel::MediaFilePanel(wxWindow * parent)
         e.Skip();
         if (auto fs = m_image_grid->GetFileSystem())
             fs->ListAllFiles();
+    });
+    m_button_upload->Bind(wxEVT_COMMAND_BUTTON_CLICKED, [this](auto &e) {
+        e.Skip();
+        uploadFile();
     });
     m_button_download->Bind(wxEVT_COMMAND_BUTTON_CLICKED, [this](auto &e) {
         m_image_grid->DoActionOnSelection(1);
@@ -331,7 +343,12 @@ void MediaFilePanel::UpdateByObj(MachineObject* obj)
     if (fs) {
         m_image_grid->SetFileSystem(nullptr);
         fs->Unbind(EVT_MODE_CHANGED, &MediaFilePanel::modeChanged, this);
+        fs->CancelUploadTask();
         fs->Stop(true);
+    }
+    if (m_upload_dlg) {
+        m_upload_dlg->Destroy();
+        m_upload_dlg = nullptr;
     }
     m_button_refresh->Enable(false);
     m_button_management->Enable(false);
@@ -357,6 +374,7 @@ void MediaFilePanel::UpdateByObj(MachineObject* obj)
             m_image_grid->ShowDownload(download_support);
             if (fs->GetCount() == 0)
                 SetSelecting(false);
+            updateUploadButton();
         });
         fs->Bind(EVT_SELECT_CHANGED, [this, wfs = boost::weak_ptr(fs)](auto &e) {
             e.Skip();
@@ -431,8 +449,33 @@ void MediaFilePanel::UpdateByObj(MachineObject* obj)
             }
             return;
         });
+        fs->Bind(EVT_UPLOADING, [this, wfs = boost::weak_ptr(fs)](auto &e) {
+            e.Skip();
+            boost::shared_ptr fs(wfs.lock());
+            if (fs == nullptr || m_image_grid->GetFileSystem() != fs || !m_upload_dlg)
+                return;
+            m_upload_dlg->Update(e.GetInt());
+        });
+        fs->Bind(EVT_UPLOAD_CHANGED, [this, wfs = boost::weak_ptr(fs)](auto &e) {
+            e.Skip();
+            boost::shared_ptr fs(wfs.lock());
+            if (fs == nullptr || m_image_grid->GetFileSystem() != fs)
+                return;
+            if (m_upload_dlg) {
+                m_upload_dlg->Destroy();
+                m_upload_dlg = nullptr;
+            }
+            updateUploadButton();
+            if (e.GetInt() == PrinterFileSystem::FF_UPLOADDONE) {
+                fs->ListAllFiles();
+            } else if (e.GetExtraLong() != PrinterFileSystem::ERROR_CANCEL) {
+                wxString msg = e.GetString().IsEmpty() ? _L("File upload failed, please try again.") : e.GetString();
+                CallAfter([this, msg] { MessageDialog(this, msg, _L("Upload failed"), wxOK | wxICON_ERROR).ShowModal(); });
+            }
+        });
         if (IsShown()) fs->Start();
     }
+    updateUploadButton();
     wxCommandEvent e(EVT_MODE_CHANGED);
     modeChanged(e);
 }
@@ -484,6 +527,7 @@ void MediaFilePanel::Rescale()
     m_button_download->Rescale();
     m_button_delete->Rescale();
     m_button_refresh->Rescale();
+    m_button_upload->Rescale();
     m_sort_box->Rescale();
     m_button_management->Rescale();
 
@@ -499,6 +543,16 @@ void MediaFilePanel::SetSelecting(bool selecting)
     m_manage_panel->GetSizer()->Show(m_button_download, selecting && download_support);
     m_manage_panel->GetSizer()->Show(m_button_delete, selecting);
     m_manage_panel->GetSizer()->Show(m_button_refresh, !selecting);
+    updateUploadButton();
+}
+
+void MediaFilePanel::updateUploadButton()
+{
+    auto fs   = m_image_grid->GetFileSystem();
+    bool show = use_lan_ftps() && fs && fs->GetFileType() == PrinterFileSystem::F_MODEL && !m_image_grid->IsSelecting();
+    m_button_upload->Enable(fs && fs->GetStatus() == PrinterFileSystem::ListReady && !m_upload_dlg);
+    if (m_manage_panel->GetSizer()->IsShown(m_button_upload) != show)
+        m_manage_panel->GetSizer()->Show(m_button_upload, show);
     m_manage_panel->Layout();
 }
 
@@ -614,12 +668,43 @@ void MediaFilePanel::fetchUrl(boost::weak_ptr<PrinterFileSystem> wfs)
 
 struct MediaProgressDialog : ProgressDialog
 {
-    MediaProgressDialog(wxString title, wxWindow * parent, std::function<void()> cancel)
-        : ProgressDialog(title, "", 100, parent, wxPD_NO_PROGRESS | wxPD_APP_MODAL | wxPD_CAN_ABORT)
+    MediaProgressDialog(wxString title, wxWindow * parent, std::function<void()> cancel, int style = wxPD_NO_PROGRESS | wxPD_APP_MODAL | wxPD_CAN_ABORT)
+        : ProgressDialog(title, "", 100, parent, style)
         , m_cancel(cancel) {}
     void OnCancel() override{m_cancel(); }
     std::function<void()> m_cancel;
 };
+
+void MediaFilePanel::uploadFile()
+{
+    auto fs = m_image_grid->GetFileSystem();
+    if (!fs || m_upload_dlg)
+        return;
+    wxFileDialog dlg(this, _L("Choose a sliced file to upload to the printer"), from_u8(wxGetApp().app_config->get_last_dir()), "",
+                     file_wildcards(FT_GCODE_3MF), wxFD_OPEN | wxFD_FILE_MUST_EXIST);
+    if (dlg.ShowModal() != wxID_OK)
+        return;
+    std::string path = into_u8(dlg.GetPath());
+    std::string name = into_u8(dlg.GetFilename());
+    // the printer keeps it in the root of the storage and replaces a file of the same name
+    for (size_t i = 0; i < fs->GetCount(); ++i) {
+        if (fs->GetFile(i).path != "/" + name)
+            continue;
+        MessageDialog ask(this, wxString::Format(_L("The file '%s' already exists on the printer. Do you want to replace it?"), from_u8(name)),
+                          _L("Upload"), wxYES_NO | wxICON_WARNING);
+        if (ask.ShowModal() != wxID_YES)
+            return;
+        break;
+    }
+    m_upload_dlg = new MediaProgressDialog(_L("Upload"), this, [wfs = boost::weak_ptr(fs)] {
+        if (auto fs = wfs.lock())
+            fs->CancelUploadTask();
+    }, wxPD_APP_MODAL | wxPD_CAN_ABORT);
+    m_upload_dlg->Update(0, _L("Uploading to the printer..."));
+    updateUploadButton();
+    fs->SetUploadFile(path, name, "sdcard");
+    fs->RequestUploadFile();
+}
 
 void MediaFilePanel::doAction(size_t index, int action)
 {

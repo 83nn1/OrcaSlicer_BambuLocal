@@ -6,7 +6,7 @@
 // This module emulates the small "tunnel" API that PrinterFileSystem uses
 // (create / open / send message / read sample / close / destroy) and answers
 // the same JSON requests (LIST_INFO, SUB_FILE, FILE_DOWNLOAD, FILE_DEL,
-// TASK_CANCEL, ...) by talking to the printer's storage over implicit FTPS
+// FILE_UPLOAD, TASK_CANCEL, ...) by talking to the printer's storage over implicit FTPS
 // (port 990, user "bblp", password = LAN access code).
 //
 // Because the request / response protocol is identical, the rest of the
