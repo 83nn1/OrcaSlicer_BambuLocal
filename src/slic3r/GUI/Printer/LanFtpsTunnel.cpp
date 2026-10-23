@@ -29,6 +29,7 @@
 #include <set>
 #include <sstream>
 #include <thread>
+#include <utility>
 #include <vector>
 
 namespace Slic3r {
