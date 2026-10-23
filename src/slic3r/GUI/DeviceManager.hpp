@@ -220,6 +220,12 @@ public:
     std::string connection_type() const { return dev_connection_type; }
     bool is_lan_mode_printer() const { return dev_connection_type == "lan"; }
     bool is_cloud_mode_printer() const { return dev_connection_type == "cloud"; }
+    // LAN only printer without the local file service of the network plug-in (P1 / A1):
+    // its storage and the files of the running job are read over FTPS (LanFtpsTunnel)
+    bool is_lan_ftps_storage() const
+    {
+        return is_lan_mode_printer() && file_local == FileLocal::FL_None && !dev_ip.empty() && !get_access_code().empty();
+    }
 
     std::chrono::system_clock::time_point last_cloud_msg_time_;
     std::chrono::system_clock::time_point last_lan_msg_time_;

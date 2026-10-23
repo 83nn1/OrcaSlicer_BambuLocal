@@ -408,17 +408,19 @@ struct PrinterFileSystem::Upload : Progress
 };
 
 
-void PrinterFileSystem::GetPickImages(const std::vector<std::string> &local_paths, const std::vector<std::string> &targetpaths)
+void PrinterFileSystem::GetPickImages(const std::vector<std::string> &local_paths, const std::vector<std::string> &targetpaths,
+                                      const std::vector<std::string> &lan_project_files)
 {
     m_download_states.clear();
 
-    GetPickImage(1, local_paths[0], targetpaths[0]);
-    GetPickImage(2, local_paths[1], targetpaths[1]);
-    GetPickImage(3, local_paths[2], targetpaths[2]);
+    GetPickImage(1, local_paths[0], targetpaths[0], lan_project_files);
+    GetPickImage(2, local_paths[1], targetpaths[1], lan_project_files);
+    GetPickImage(3, local_paths[2], targetpaths[2], lan_project_files);
 
 }
 
-void PrinterFileSystem::GetPickImage(int id, const std::string &local_path, const std::string &targetpath)
+void PrinterFileSystem::GetPickImage(int id, const std::string &local_path, const std::string &targetpath,
+                                     const std::vector<std::string> &lan_project_files)
 {
     json j;
 
@@ -427,6 +429,8 @@ void PrinterFileSystem::GetPickImage(int id, const std::string &local_path, cons
     j["peer_host"]     = "studio";
     j["command"]       = "get_project_file";
     j["file_rel_path"] = targetpath;
+    if (!lan_project_files.empty())
+        j["lan_project_files"] = lan_project_files;
 
     std::string param = j.dump();
 

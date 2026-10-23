@@ -12,6 +12,10 @@
 // Because the request / response protocol is identical, the rest of the
 // storage browser (ImageGrid, MediaFilePanel, PrinterFileSystem) works
 // unchanged.
+//
+// The part skip dialog uses the same tunnel: its "get_project_file" requests
+// (pick image, model_settings.config, slice_info.config of the running job)
+// are answered from the job's 3mf on the storage.
 
 #include <string>
 

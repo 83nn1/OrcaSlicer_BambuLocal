@@ -165,6 +165,8 @@ public:
     bool                    Parse();
     std::vector<ObjectInfo> GetPlateObjects(int plate_idx);
     bool                    GetLabelObjectEnabled(int plate_idx);
+    // index of the only plate in the file, -1 if there is not exactly one
+    int                     GetOnlyPlateIndex() const;
 
 private:
     std::string  path_;

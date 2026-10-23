@@ -1,6 +1,9 @@
 # OrcaSlicer_BambuLocal
 
-Fork von [OrcaSlicer](https://github.com/OrcaSlicer/OrcaSlicer) mit einer einzigen Änderung: **Zugriff auf den Speicher (SD-Karte) von Bambu-Lab-Druckern im LAN-Only-Modus.**
+Fork von [OrcaSlicer](https://github.com/OrcaSlicer/OrcaSlicer) für Bambu-Lab-Drucker im LAN-Only-Modus (P1/A1):
+
+- **Zugriff auf den Speicher (SD-Karte)** unter *Gerät → Speicher*
+- **Objekte überspringen** während des Drucks (siehe [unten](#objekte-überspringen))
 
 ## Problem
 
@@ -46,12 +49,25 @@ Geänderte Dateien:
 - `localization/i18n/de/OrcaSlicer_de.po`: deutsche Texte für die Sortierauswahl
 - `src/slic3r/CMakeLists.txt`
 
+## Objekte überspringen
+
+Orca enthält den Dialog „Teile überspringen“ aus Bambu Studio. Bei P1/A1 im LAN-Only-Modus blieb der Knopf aber ausgeblendet: Der Drucker meldet die Funktion nicht, und der Dialog holt Vorschaubild und Objektliste über den Dateidienst des Netzwerk-Plugins, den diese Drucker nicht haben.
+
+Jetzt erscheint der Knopf neben Pause/Stopp, sobald der Drucker über FTPS angebunden ist (gleiche Bedingung wie beim Speicher-Tab). Der Dialog liest `Metadata/pick_<platte>.png`, `model_settings.config` und `slice_info.config` aus der `.3mf` des laufenden Drucks auf der SD-Karte. Gesucht wird sie anhand von `gcode_file` und `subtask_name` aus dem Druckerstatus in `/`, `/cache` und `/model`. Das Überspringen selbst ist der MQTT-Befehl `skip_objects`, den der Drucker auch im LAN-Modus annimmt.
+
+Meldet der Drucker die Plattennummer nicht, gilt die einzige Platte mit G-Code in der Datei.
+
+Voraussetzungen: „Objekte beschriften“ (Label objects) war beim Slicen aktiv, und die Teile sind nicht zu einem Objekt zusammengeführt.
+
+Geänderte Dateien: `LanFtpsTunnel.cpp/.hpp` (Anfrage `get_project_file`), `PrinterFileSystem.cpp/.h`, `PartSkipDialog.cpp`, `SkipPartCanvas.cpp/.hpp`, `StatusPanel.cpp`, `DeviceManager.hpp`.
+
 ## Stand
 
 - Gegen einen nachgebauten Drucker-FTPS-Server getestet: Dateiliste, Umlaute und Leerzeichen in Dateinamen, Vorschaubilder, Downloads mit MD5-Prüfung, Abbrechen, Löschen, falscher Access Code.
 - Am echten P1S getestet: Dateiliste, Vorschaubilder, Druckzeit und Gewicht funktionieren.
 - Ob „Drucken“ aus dem Modell-Tab (Orcas Druck-von-SD-Dialog) im LAN-Modus durchläuft, ist offen.
 - Hochladen auf die SD-Karte aus dem Speicher-Tab ist nicht umgesetzt.
+- Objekte überspringen: gegen den nachgebauten FTPS-Server getestet (Suche der Druckdatei, Vorschaubild > 256 KB in Blöcken, MD5, Platten-Fallback, fehlende Datei). Am echten P1S noch nicht getestet.
 
 ## Bauen
 

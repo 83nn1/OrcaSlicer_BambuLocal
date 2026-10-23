@@ -207,9 +207,12 @@ public:
 
     void DownloadFiles(size_t index, std::string const &path);
 
-    void GetPickImage(int id, const std::string &local_path, const std::string &path);
+    void GetPickImage(int id, const std::string &local_path, const std::string &path, const std::vector<std::string> &lan_project_files = {});
 
-    void GetPickImages(const std::vector<std::string> &local_paths, const std::vector<std::string> &targetpaths);
+    // lan_project_files: possible paths of the job's 3mf on the storage, only read by the
+    // FTPS tunnel of LAN only printers (LanFtpsTunnel), which has no running job to ask
+    void GetPickImages(const std::vector<std::string> &local_paths, const std::vector<std::string> &targetpaths,
+                       const std::vector<std::string> &lan_project_files = {});
 
 
     void DownloadRamFile(int index, const std::string &local_path, const std::string &param);

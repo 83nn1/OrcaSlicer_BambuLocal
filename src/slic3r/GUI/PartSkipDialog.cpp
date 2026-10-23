@@ -22,6 +22,8 @@
 #include <wx/msgdlg.h>
 #include <boost/log/trivial.hpp>
 #include <string>
+#include <algorithm>
+#include <cstring>
 #include <boost/smart_ptr/make_shared_object.hpp>
 #include <boost/smart_ptr/weak_ptr.hpp>
 #include <boost/algorithm/string/predicate.hpp>
@@ -55,6 +57,7 @@
 #include "Widgets/Label.hpp"
 
 #include "Printer/PrinterFileSystem.h"
+#include "Printer/LanFtpsTunnel.hpp"
 #include "PartSkipDialog.hpp"
 #include "SkipPartCanvas.hpp"
 
@@ -63,6 +66,39 @@
 namespace fs = boost::filesystem;
 
 namespace Slic3r { namespace GUI {
+
+// Possible paths of the running job's 3mf on the storage of a LAN only printer
+// that has no local file service (see MachineObject::is_lan_ftps_storage()).
+// The printer reports the uploaded file in gcode_file, sometimes with a storage
+// prefix, and the project name in subtask_name. Uploads land in the root or in
+// /cache, jobs started from the printer's file list may come from /model.
+static std::vector<std::string> lan_project_files(const MachineObject *obj)
+{
+    std::vector<std::string> names;
+    std::string              file = obj->m_gcode_file;
+    for (const char *prefix : {"file://", "ftp://"})
+        if (boost::algorithm::istarts_with(file, prefix)) file.erase(0, strlen(prefix));
+    while (boost::algorithm::starts_with(file, "/")) file.erase(0, 1);
+    if (boost::algorithm::istarts_with(file, "sdcard/")) file.erase(0, strlen("sdcard/"));
+
+    std::vector<std::string> paths;
+    if (boost::algorithm::iends_with(file, ".3mf")) {
+        paths.push_back("/" + file);
+        names.push_back(file.substr(file.find_last_of('/') + 1));
+    }
+    if (!obj->subtask_name.empty()) {
+        names.push_back(obj->subtask_name + ".gcode.3mf");
+        names.push_back(obj->subtask_name + ".3mf");
+    }
+    for (const auto &name : names)
+        for (const char *dir : {"/", "/cache/", "/model/"})
+            paths.push_back(dir + name);
+
+    std::vector<std::string> unique;
+    for (const auto &path : paths)
+        if (std::find(unique.begin(), unique.end(), path) == unique.end()) unique.push_back(path);
+    return unique;
+}
 
 extern wxString hide_passwd(wxString url, std::vector<wxString> const &passwords);
 extern void     refresh_agora_url(char const *device, char const *dev_ver, char const *channel, void *context, void (*callback)(void *context, char const *url));
@@ -433,7 +469,10 @@ void PartSkipDialog::DownloadPartsFile()
     m_target_paths.push_back("Metadata/model_settings.config");
     m_target_paths.push_back("Metadata/slice_info.config");
 
-    if (!is_local_file_existed(m_local_paths)) {
+    // a LAN only printer has no job id to tell its jobs apart, always read them again
+    // (the FTPS tunnel keeps a cache of the job file itself)
+    bool lan_ftps = m_obj && m_obj->is_lan_ftps_storage();
+    if (lan_ftps || !is_local_file_existed(m_local_paths)) {
         if (!m_file_sys) {
             m_file_sys = boost::make_shared<PrinterFileSystem>();
             m_file_sys->Attached();
@@ -469,6 +508,12 @@ void PartSkipDialog::fetchUrl(boost::weak_ptr<PrinterFileSystem> wfs)
 
     NetworkAgent *agent         = wxGetApp().getAgent();
     std::string   agent_version = agent ? agent->get_version() : "";
+
+    if (obj->is_lan_ftps_storage()) {
+        // no local file service: the job's files come from its 3mf, read over FTPS
+        fs->SetUrl(LanFtps::make_url(obj->get_dev_ip(), "bblp", obj->get_access_code()));
+        return;
+    }
 
     auto url_state = m_url_state;
     if (obj->is_lan_mode_printer()) { url_state = URL_TCP; }
@@ -534,7 +579,9 @@ void PartSkipDialog::OnFileSystemEvent(wxCommandEvent &e)
     case PrinterFileSystem::Initializing:
     case PrinterFileSystem::Connecting: break;
     case PrinterFileSystem::ListSyncing: {
-        m_file_sys->GetPickImages(m_local_paths, m_target_paths);
+        std::vector<std::string> project_files;
+        if (m_obj && m_obj->is_lan_ftps_storage()) project_files = lan_project_files(m_obj);
+        m_file_sys->GetPickImages(m_local_paths, m_target_paths, project_files);
         break;
     }
     case PrinterFileSystem::Failed: {
@@ -720,6 +767,11 @@ void PartSkipDialog::InitDialogUI()
     ModelSettingHelper helper(slice_info);
 
     if (helper.Parse()) {
+        // the printer may not report the plate (LAN only mode), a sliced file holds just the printed one
+        if (helper.GetPlateObjects(m_plate_idx).empty()) {
+            int only_plate = helper.GetOnlyPlateIndex();
+            if (only_plate > 0) m_plate_idx = only_plate;
+        }
         is_model_support_partskip = helper.GetLabelObjectEnabled(m_plate_idx);
         auto parse_result         = helper.GetPlateObjects(m_plate_idx);
         for (const auto &part : parse_result) {

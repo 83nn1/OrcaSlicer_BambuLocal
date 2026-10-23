@@ -711,6 +711,11 @@ bool ModelSettingHelper::GetLabelObjectEnabled(int plate_idx)
     return false;
 }
 
+int ModelSettingHelper::GetOnlyPlateIndex() const
+{
+    return context_.plates.size() == 1 ? context_.plates.front().index : -1;
+}
+
 void ModelSettingHelper::DataHandler(const XML_Char *s, int len)
 {
     // do nothing

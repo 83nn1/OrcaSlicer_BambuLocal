@@ -1137,7 +1137,7 @@ void PrintingTaskPanel::enable_partskip_button(MachineObject* obj, bool enable)
         m_button_partskip->Enable(false);
         m_button_partskip->SetLabel("");
         m_button_partskip->SetIcon("print_control_partskip_disable");
-    }else if(obj && obj->is_support_brtc){
+    }else if(obj && (obj->is_support_brtc || obj->is_lan_ftps_storage())){
         m_button_partskip->Enable(true);
         m_button_partskip->SetIcon("print_control_partskip");   
     }
@@ -2773,7 +2773,9 @@ void StatusPanel::update_partskip_button(MachineObject *obj) {
     if (!obj) return;
 
     auto partskip_button = m_project_task_panel->get_partskip_button();
-    if( obj->is_support_partskip ){
+    // P1 / A1 in LAN only mode do not report part skip, but skip objects over MQTT and
+    // the dialog reads the job's files over FTPS
+    if( obj->is_support_partskip || obj->is_lan_ftps_storage() ){
         partskip_button->Show();
     }else{
         partskip_button->Hide();

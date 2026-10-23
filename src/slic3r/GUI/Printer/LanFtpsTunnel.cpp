@@ -308,11 +308,16 @@ public:
     int send_message(char const *data, int len)
     {
         std::string msg(data, len);
+        std::string param; // optional json after the request, e.g. of a "mem:/" download
         auto        n = msg.find("\n\n");
-        if (n != std::string::npos) msg.resize(n);
+        if (n != std::string::npos) {
+            param = msg.substr(n + 2);
+            msg.resize(n);
+        }
         json root;
         try {
             root = json::parse(msg);
+            if (!param.empty()) root["param"] = json::parse(param);
         } catch (...) {
             BOOST_LOG_TRIVIAL(warning) << "LanFtps: invalid request";
             return 0;
@@ -381,7 +386,10 @@ private:
             uint32_t seq  = req.value("sequence", 0u);
             m_seq         = seq;
             try {
-                handle(type, seq, req["req"]);
+                if (type == FILE_DOWNLOAD && req["req"].value("path", "").rfind("mem:/", 0) == 0)
+                    project_file_download(seq, req.value("param", json::object()));
+                else
+                    handle(type, seq, req["req"]);
             } catch (std::exception const &e) {
                 BOOST_LOG_TRIVIAL(warning) << "LanFtps: request " << type << " failed: " << e.what();
                 push(seq, ERROR_JSON, json::object());
@@ -1101,6 +1109,117 @@ private:
             }
         }
         push(seq, result, json::object());
+    }
+
+    // ---------------------------------------------------------------- part skip
+
+    // A "get_project_file" request (FILE_DOWNLOAD of "mem:/<n>" with a json param)
+    // asks for a file of the job that is printing. The printer's own file service
+    // extracts it from the running job. Here it comes from the job's 3mf on the
+    // storage, whose possible paths the part skip dialog sends in "lan_project_files".
+    void project_file_download(uint32_t seq, json const &param)
+    {
+        std::string entry = param.value("file_rel_path", "");
+        fs::path    local;
+        int         res = entry.empty() ? FILE_NO_EXIST : find_project(param.value("lan_project_files", json::array()), local);
+        if (res == ERROR_CANCEL) return;
+        std::string data;
+        if (res == 0 && !read_project_entry(local, entry, data)) res = FILE_NO_EXIST;
+        if (res != 0) {
+            push(seq, res, json::object());
+            return;
+        }
+
+        // first message: the result of the request, as the printer sends it
+        std::string head = json{{"result", 0}, {"size", data.size()}}.dump();
+        json        reply;
+        reply["offset"]            = 0;
+        reply["total"]             = data.size();
+        reply["size"]              = head.size();
+        reply["mem_dl_param_size"] = head.size();
+        push(seq, CONTINUE, reply, head.data(), head.size());
+
+        MD5_CTX ctx;
+        MD5_Init(&ctx);
+        MD5_Update(&ctx, data.data(), data.size());
+        std::string md5 = md5_hex(ctx);
+        for (size_t offset = 0; offset < data.size(); offset += CHUNK_SIZE) {
+            if (cancelled()) return;
+            size_t n    = (std::min)(CHUNK_SIZE, data.size() - offset);
+            bool   last = offset + n == data.size();
+            json   chunk;
+            chunk["offset"] = offset;
+            chunk["total"]  = data.size();
+            chunk["size"]   = n;
+            if (last) chunk["file_md5"] = md5;
+            push(seq, last ? SUCCESS : CONTINUE, chunk, data.data() + offset, n);
+        }
+    }
+
+    // Finds the job's 3mf among the candidate paths and makes it available locally
+    int find_project(json const &candidates, fs::path &local)
+    {
+        std::map<std::string, std::vector<Entry>> listed; // LIST each directory once
+        for (auto &c : candidates) {
+            if (!c.is_string()) continue;
+            if (cancelled()) return ERROR_CANCEL;
+            std::string path = c.get<std::string>();
+            std::string dir  = dir_of(path);
+            auto        it   = listed.find(dir);
+            if (it == listed.end()) {
+                std::vector<Entry> entries;
+                if (list_dir(dir, entries) != 0) entries.clear();
+                it = listed.emplace(dir, std::move(entries)).first;
+            }
+            for (auto &e : it->second) {
+                if (e.dir || e.path != path) continue;
+                // size and time tell a new upload of the same name from the cached one
+                m_known[e.path] = e;
+                BOOST_LOG_TRIVIAL(info) << "LanFtps: job file " << path;
+                return ensure_cached(path, local);
+            }
+        }
+        BOOST_LOG_TRIVIAL(info) << "LanFtps: job file not found on the storage";
+        return FILE_NO_EXIST;
+    }
+
+    // Reads one entry of the job's 3mf. A sliced file holds the G-code of the plate
+    // that is printed under that plate's number, which the printer does not always
+    // report in LAN only mode. So the pick image of a plate that is not in the file
+    // falls back to the one of the only plate with G-code.
+    static bool read_project_entry(fs::path const &local, std::string const &name, std::string &data)
+    {
+        mz_zip_archive zip;
+        mz_zip_zero_struct(&zip);
+        if (!open_zip_reader(&zip, local.string()))
+            return false;
+        int index = mz_zip_reader_locate_file(&zip, name.c_str(), nullptr, 0);
+        if (index < 0 && name.rfind("Metadata/pick_", 0) == 0) {
+            constexpr char const *prefix = "Metadata/plate_";
+            constexpr char const *suffix = ".gcode";
+            std::vector<std::string> plates;
+            for (mz_uint i = 0; i < mz_zip_reader_get_num_files(&zip); ++i) {
+                char buf[256];
+                if (mz_zip_reader_get_filename(&zip, i, buf, sizeof(buf)) == 0) continue;
+                std::string file = buf;
+                if (file.rfind(prefix, 0) == 0 && ends_with_ci(file, suffix))
+                    plates.push_back(file.substr(strlen(prefix), file.size() - strlen(prefix) - strlen(suffix)));
+            }
+            if (plates.size() == 1)
+                index = mz_zip_reader_locate_file(&zip, ("Metadata/pick_" + plates.front() + ".png").c_str(), nullptr, 0);
+        }
+        bool ok = false;
+        if (index >= 0) {
+            size_t size = 0;
+            void  *p    = mz_zip_reader_extract_to_heap(&zip, mz_uint(index), &size, 0);
+            if (p) {
+                data.assign(static_cast<char *>(p), size);
+                mz_free(p);
+                ok = size > 0;
+            }
+        }
+        close_zip_reader(&zip);
+        return ok;
     }
 
 private:
