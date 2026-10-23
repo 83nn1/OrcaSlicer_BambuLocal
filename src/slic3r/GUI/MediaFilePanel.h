@@ -21,6 +21,7 @@
 #include <wx/panel.h>
 
 class Button;
+class ComboBox;
 class SwitchButton;
 class Label;
 class StaticBox;
@@ -61,6 +62,8 @@ private:
 
     void doAction(size_t index, int action);
 
+    void applySortMode(int mode);
+
 private:
     ScalableBitmap m_bmp_loading;
     ScalableBitmap m_bmp_failed;
@@ -81,6 +84,7 @@ private:
     ::Button *m_button_download = nullptr;
     ::Button *m_button_refresh = nullptr;
     ::Button *m_button_management = nullptr;
+    ::ComboBox *m_sort_box = nullptr;
 
     ImageGrid * m_image_grid   = nullptr;
 

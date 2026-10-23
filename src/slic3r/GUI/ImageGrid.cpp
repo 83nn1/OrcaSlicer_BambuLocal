@@ -134,6 +134,13 @@ void Slic3r::GUI::ImageGrid::SetGroupMode(int mode)
     m_scroll_offset = 0;
 }
 
+void Slic3r::GUI::ImageGrid::ScrollToTop()
+{
+    m_row_offset    = 0;
+    m_scroll_offset = 0;
+    Refresh();
+}
+
 void Slic3r::GUI::ImageGrid::SetSelecting(bool selecting)
 {
     m_selecting = selecting;
@@ -588,7 +595,7 @@ void ImageGrid::render(wxDC& dc)
         off.y += m_cell_size.GetHeight();
     }
     // Draw floating date range for non-group list
-    if (m_file_sys->GetGroupMode() == PrinterFileSystem::G_NONE && m_file_sys->GetCount() > 0) {
+    if (m_file_sys->GetGroupMode() == PrinterFileSystem::G_NONE && m_file_sys->IsSortedByTime() && m_file_sys->GetCount() > 0) {
         //dc.DrawBitmap(m_title_mask, {off.x, 0});
         dc.DrawRectangle({off.x, 0}, m_title_mask.GetSize());
         auto & file1 = m_file_sys->GetFile(start);

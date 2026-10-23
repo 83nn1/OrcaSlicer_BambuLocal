@@ -52,6 +52,8 @@ public:
 
     void SetGroupMode(int mode);
 
+    void ScrollToTop();
+
     void SetSelecting(bool selecting);
 
     bool IsSelecting() { return m_selecting; }

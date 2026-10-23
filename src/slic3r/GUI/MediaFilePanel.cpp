@@ -9,6 +9,7 @@
 #include "slic3r/Utils/NetworkAgent.hpp"
 #include "Plater.hpp"
 #include "Widgets/Button.hpp"
+#include "Widgets/ComboBox.hpp"
 #include "Widgets/Label.hpp"
 #include "Printer/PrinterFileSystem.h"
 #include "MsgDialog.hpp"
@@ -136,6 +137,14 @@ MediaFilePanel::MediaFilePanel(wxWindow * parent)
     m_button_management->SetToolTip(_L("Batch manage files."));
     m_button_refresh = new ::Button(m_manage_panel, _L("Refresh"));
     m_button_refresh->SetToolTip(_L("Reload file list from printer."));
+    // Order of PrinterFileSystem::SortMode
+    m_sort_box = new ::ComboBox(m_manage_panel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(FromDIP(170), -1), 0, nullptr, wxCB_READONLY);
+    m_sort_box->Append(_L("Newest first"));
+    m_sort_box->Append(_L("Oldest first"));
+    m_sort_box->Append(_L("Name (A to Z)"));
+    m_sort_box->Append(_L("Name (Z to A)"));
+    m_sort_box->SetFont(Label::Body_12);
+    m_sort_box->SetToolTip(_L("Sort order of the files."));
     for (auto b : {m_button_delete, m_button_download, m_button_refresh, m_button_management}) {
         b->SetFont(Label::Body_12);
         b->SetCornerRadius(12);
@@ -157,6 +166,7 @@ MediaFilePanel::MediaFilePanel(wxWindow * parent)
     manage_sizer->AddStretchSpacer(1);
     manage_sizer->Add(m_button_download, 0, wxALIGN_CENTER_VERTICAL)->Show(false);
     manage_sizer->Add(m_button_delete, 0, wxALIGN_CENTER_VERTICAL | wxLEFT | wxRIGHT, 24)->Show(false);
+    manage_sizer->Add(m_sort_box, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(12));
     manage_sizer->Add(m_button_refresh, 0, wxALIGN_CENTER_VERTICAL);
     manage_sizer->Add(m_button_management, 0, wxALIGN_CENTER_VERTICAL | wxLEFT | wxRIGHT, 24);
     m_manage_panel->SetSizer(manage_sizer);
@@ -202,6 +212,19 @@ MediaFilePanel::MediaFilePanel(wxWindow * parent)
     m_button_video->Bind(wxEVT_COMMAND_BUTTON_CLICKED, type_button_clicked);
     m_button_model->Bind(wxEVT_COMMAND_BUTTON_CLICKED, type_button_clicked);
     m_button_timelapse->SetValue(true);
+
+    // Sort order, remembered across sessions
+    int sort_mode = atoi(wxGetApp().app_config->get("media_file_sort").c_str());
+    if (sort_mode < PrinterFileSystem::S_TIME_DESC || sort_mode > PrinterFileSystem::S_NAME_DESC)
+        sort_mode = PrinterFileSystem::S_TIME_DESC;
+    m_sort_box->SetSelection(sort_mode);
+    m_sort_box->Bind(wxEVT_COMBOBOX, [this](wxCommandEvent &e) {
+        int mode = m_sort_box->GetSelection();
+        wxGetApp().app_config->set("media_file_sort", std::to_string(mode));
+        applySortMode(mode);
+        m_image_grid->ScrollToTop();
+    });
+    applySortMode(sort_mode);
 
     // File management
     m_button_management->Bind(wxEVT_COMMAND_BUTTON_CLICKED, [this](auto &e) {
@@ -299,6 +322,7 @@ void MediaFilePanel::UpdateByObj(MachineObject* obj)
         m_image_grid->SetStatus(m_bmp_failed, _L("Please confirm if the printer is connected."));
     } else {
         boost::shared_ptr<PrinterFileSystem> fs(new PrinterFileSystem);
+        fs->SetSortMode(PrinterFileSystem::SortMode(m_sort_box->GetSelection()));
         fs->Attached();
         m_image_grid->SetFileSystem(fs);
         m_image_grid->SetFileType(m_last_type, m_external ? "" : "internal");
@@ -411,6 +435,17 @@ void MediaFilePanel::SwitchStorage(bool external)
     m_image_grid->SetFileType(m_last_type, m_external ? "" : "internal");
 }
 
+void MediaFilePanel::applySortMode(int mode)
+{
+    auto sort_mode = PrinterFileSystem::SortMode(mode);
+    if (auto fs = m_image_grid->GetFileSystem())
+        fs->SetSortMode(sort_mode); // falls back to "All Files" when sorted by name
+    // grouping by year / month needs the files sorted by time
+    bool by_time = sort_mode == PrinterFileSystem::S_TIME_DESC || sort_mode == PrinterFileSystem::S_TIME_ASC;
+    m_button_year->Enable(by_time);
+    m_button_month->Enable(by_time);
+}
+
 void MediaFilePanel::Rescale()
 {
     m_bmp_loading.msw_rescale();
@@ -431,6 +466,7 @@ void MediaFilePanel::Rescale()
     m_button_download->Rescale();
     m_button_delete->Rescale();
     m_button_refresh->Rescale();
+    m_sort_box->Rescale();
     m_button_management->Rescale();
 
     m_image_grid->Rescale();

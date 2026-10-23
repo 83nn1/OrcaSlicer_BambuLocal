@@ -33,6 +33,7 @@
 #include <vector>
 #include <cassert>
 #include <utility>
+#include <tuple>
 #include <ctime>
 #include <openssl/md5.h>
 #include <memory>
@@ -123,6 +124,15 @@ PrinterFileSystem::PrinterFileSystem()
 #endif
     }
     m_session.owner = this;
+    // Sent by the LAN storage access (LanFtpsTunnel) once it learned the real job times
+    InstallNotify(LIST_RESYNC_NOTIFY, [this](int, json const &, unsigned char const *) -> int {
+        if (m_session.lan_ftps)
+            PostCallback([this] {
+                if (m_status == Status::ListReady)
+                    ListAllFiles();
+            });
+        return 0;
+    });
 #ifdef PRINTER_FILE_SYSTEM_TEST
     auto time = wxDateTime::Now();
     wxString path = "D:\\work\\pic\\";
@@ -162,6 +172,7 @@ void PrinterFileSystem::SetFileType(FileType type, std::string const &storage)
     std::swap(m_file_type, type);
     m_file_storage = storage;
     m_file_list.swap(m_file_list_cache[{m_file_type, m_file_storage}]);
+    SortFiles(m_file_list);
     m_lock_start = m_lock_end = 0;
     BuildGroups();
     UpdateGroupSelect();
@@ -182,6 +193,98 @@ void PrinterFileSystem::SetGroupMode(GroupMode mode)
     m_lock_start = m_lock_end = 0;
     UpdateGroupSelect();
     SendChangedEvent(EVT_MODE_CHANGED);
+}
+
+void PrinterFileSystem::SetSortMode(SortMode mode)
+{
+    if (m_sort_mode == mode)
+        return;
+    m_sort_mode = mode;
+    // grouping by year / month only works on a list sorted by time
+    if (!IsSortedByTime())
+        m_group_mode = G_NONE;
+    SortFiles(m_file_list);
+    m_lock_start = m_lock_end = 0;
+    BuildGroups();
+    UpdateGroupSelect();
+    SendChangedEvent(EVT_MODE_CHANGED);
+    SendChangedEvent(EVT_FILE_CHANGED);
+}
+
+// Case insensitive, accents folded, numbers compared by value ("plate_2" < "plate_10")
+static std::wstring name_sort_key(std::string const &name)
+{
+    // Latin-1 letters, both cases: Lower() leaves them alone in the "C" locale
+    static const std::map<wchar_t, wchar_t const *> fold = {
+        {L'\u00c0', L"a"}, {L'\u00c1', L"a"}, {L'\u00c2', L"a"}, {L'\u00c3', L"a"}, {L'\u00c4', L"a"},
+        {L'\u00c5', L"a"}, {L'\u00c6', L"ae"}, {L'\u00c7', L"c"}, {L'\u00c8', L"e"}, {L'\u00c9', L"e"},
+        {L'\u00ca', L"e"}, {L'\u00cb', L"e"}, {L'\u00cc', L"i"}, {L'\u00cd', L"i"}, {L'\u00ce', L"i"},
+        {L'\u00cf', L"i"}, {L'\u00d0', L"d"}, {L'\u00d1', L"n"}, {L'\u00d2', L"o"}, {L'\u00d3', L"o"},
+        {L'\u00d4', L"o"}, {L'\u00d5', L"o"}, {L'\u00d6', L"o"}, {L'\u00d8', L"o"}, {L'\u00d9', L"u"},
+        {L'\u00da', L"u"}, {L'\u00db', L"u"}, {L'\u00dc', L"u"}, {L'\u00dd', L"y"}, {L'\u00de', L"th"},
+        {L'\u00df', L"ss"}, {L'\u00e0', L"a"}, {L'\u00e1', L"a"}, {L'\u00e2', L"a"}, {L'\u00e3', L"a"},
+        {L'\u00e4', L"a"}, {L'\u00e5', L"a"}, {L'\u00e6', L"ae"}, {L'\u00e7', L"c"}, {L'\u00e8', L"e"},
+        {L'\u00e9', L"e"}, {L'\u00ea', L"e"}, {L'\u00eb', L"e"}, {L'\u00ec', L"i"}, {L'\u00ed', L"i"},
+        {L'\u00ee', L"i"}, {L'\u00ef', L"i"}, {L'\u00f0', L"d"}, {L'\u00f1', L"n"}, {L'\u00f2', L"o"},
+        {L'\u00f3', L"o"}, {L'\u00f4', L"o"}, {L'\u00f5', L"o"}, {L'\u00f6', L"o"}, {L'\u00f8', L"o"},
+        {L'\u00f9', L"u"}, {L'\u00fa', L"u"}, {L'\u00fb', L"u"}, {L'\u00fc', L"u"}, {L'\u00fd', L"y"},
+        {L'\u00fe', L"th"}, {L'\u00ff', L"y"}, {L'\u0178', L"y"},
+    };
+    std::wstring key;
+    for (auto c : wxString::FromUTF8(name).Lower()) {
+        wchar_t w    = wchar_t(c.GetValue());
+        auto    iter = fold.find(w);
+        if (iter != fold.end())
+            key += iter->second;
+        else
+            key += w;
+    }
+    return key;
+}
+
+static int natural_compare(std::wstring const &a, std::wstring const &b)
+{
+    auto   digit = [](wchar_t c) { return c >= L'0' && c <= L'9'; };
+    size_t i = 0, j = 0;
+    while (i < a.size() && j < b.size()) {
+        if (digit(a[i]) && digit(b[j])) {
+            size_t i2 = i, j2 = j;
+            while (i2 < a.size() && digit(a[i2])) ++i2;
+            while (j2 < b.size() && digit(b[j2])) ++j2;
+            while (i + 1 < i2 && a[i] == L'0') ++i;
+            while (j + 1 < j2 && b[j] == L'0') ++j;
+            if (i2 - i != j2 - j)
+                return i2 - i < j2 - j ? -1 : 1;
+            if (int c = a.compare(i, i2 - i, b, j, j2 - j))
+                return c < 0 ? -1 : 1;
+            i = i2;
+            j = j2;
+        } else {
+            if (a[i] != b[j])
+                return a[i] < b[j] ? -1 : 1;
+            ++i;
+            ++j;
+        }
+    }
+    return (a.size() - i) == (b.size() - j) ? 0 : (a.size() - i) < (b.size() - j) ? -1 : 1;
+}
+
+void PrinterFileSystem::SortFiles(FileList &list) const
+{
+    std::map<std::string, std::wstring> keys;
+    for (auto &file : list)
+        keys.emplace(file.path + '\n' + file.name, name_sort_key(file.name));
+    auto by_name = [&keys](File const &l, File const &r) {
+        return natural_compare(keys[l.path + '\n' + l.name], keys[r.path + '\n' + r.name]);
+    };
+    std::stable_sort(list.begin(), list.end(), [this, &by_name](File const &l, File const &r) {
+        switch (m_sort_mode) {
+        case S_TIME_ASC: return l.time != r.time ? l.time < r.time : by_name(l, r) < 0;
+        case S_NAME_ASC: return by_name(l, r) < 0;
+        case S_NAME_DESC: return by_name(l, r) > 0;
+        default: return l.time != r.time ? l.time > r.time : by_name(l, r) < 0;
+        }
+    });
 }
 
 size_t PrinterFileSystem::EnterSubGroup(size_t index)
@@ -229,32 +332,26 @@ void PrinterFileSystem::ListAllFiles()
         if (type != m_file_type)
             return 0;
         m_file_list.swap(list);
-        for (auto & file : m_file_list)
+        // keep what is known about files that did not change (matched by path, name and size,
+        // not by position: a refreshed list may come with other times, e.g. from LanFtpsTunnel)
+        std::map<std::tuple<std::string, std::string, boost::uint64_t>, File *> old_files;
+        for (auto &file : list)
+            old_files.emplace(std::make_tuple(file.path, file.name, file.size), &file);
+        for (auto &file : m_file_list) {
             file.thumbnail = default_thumbnail;
-        std::sort(m_file_list.begin(), m_file_list.end());
-        auto iter1 = m_file_list.begin();
-        auto end1  = m_file_list.end();
-        auto iter2 = list.begin();
-        auto end2  = list.end();
-        while (iter1 != end1 && iter2 != end2) {
-            if (*iter1 < *iter2) {
-                ++iter1;
-            } else if (*iter2 < *iter1) {
-                ++iter2;
-            } else {
-                if (iter1->path == iter2->path && iter1->name == iter2->name) {
-                    iter1->thumbnail = iter2->thumbnail;
-                    iter1->flags     = iter2->flags;
-                    if (!iter1->thumbnail.IsOk())
-                        iter1->flags &= ~FF_THUMNAIL;
-                    iter1->download   = iter2->download;
-                    iter1->local_path = iter2->local_path;
-                    iter1->metadata   = iter2->metadata;
-                }
-                ++iter1;
-                ++iter2;
-            }
+            auto iter      = old_files.find(std::make_tuple(file.path, file.name, file.size));
+            if (iter == old_files.end())
+                continue;
+            File &old       = *iter->second;
+            file.thumbnail  = old.thumbnail;
+            file.flags      = old.flags;
+            if (!file.thumbnail.IsOk())
+                file.flags &= ~FF_THUMNAIL;
+            file.download   = old.download;
+            file.local_path = old.local_path;
+            file.metadata   = old.metadata;
         }
+        SortFiles(m_file_list);
         BuildGroups();
         UpdateGroupSelect();
         m_last_error = 0;
@@ -610,8 +707,9 @@ PrinterFileSystem::UploadFile::~UploadFile()
 
 size_t PrinterFileSystem::GetIndexAtTime(boost::uint32_t time)
 {
-    auto   iter = std::upper_bound(m_file_list.begin(), m_file_list.end(), File{"", "", time});
-    size_t n = std::distance(m_file_list.begin(), iter) - 1;
+    // the list may be sorted in any order
+    auto   iter = std::find_if(m_file_list.begin(), m_file_list.end(), [time](File const &f) { return f.time == time; });
+    size_t n    = iter == m_file_list.end() ? 0 : std::distance(m_file_list.begin(), iter);
     if (m_group_mode == G_NONE) {
         return n;
     }
@@ -757,6 +855,11 @@ void PrinterFileSystem::BuildGroups()
     m_group_month.clear();
     if (m_file_list.empty())
         return;
+    if (!IsSortedByTime()) { // one group, grouping is not offered then
+        m_group_year.push_back(0);
+        m_group_month.push_back(0);
+        return;
+    }
     wxDateTime t = wxDateTime((time_t) m_file_list.front().time);
     m_group_year.push_back(0);
     m_group_month.push_back(0);
@@ -1675,6 +1778,7 @@ void PrinterFileSystem::HandleResponse(boost::unique_lock<boost::mutex> &l, Bamb
         cmd -= NOTIFY_FIRST;
         if (size_t(cmd) >= m_notifies.size()) return;
         auto n = m_notifies[cmd];
+        if (!n) return;
         l.unlock();
         n(result, resp, json_end);
         l.lock();

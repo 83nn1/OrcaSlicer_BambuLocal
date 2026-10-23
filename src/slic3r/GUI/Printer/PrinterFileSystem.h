@@ -105,6 +105,19 @@ public:
 
     void SetGroupMode(GroupMode mode);
 
+    enum SortMode {
+        S_TIME_DESC, // newest first (default)
+        S_TIME_ASC,
+        S_NAME_ASC,
+        S_NAME_DESC,
+    };
+
+    void SetSortMode(SortMode mode);
+
+    SortMode GetSortMode() const { return m_sort_mode; }
+
+    bool IsSortedByTime() const { return m_sort_mode == S_TIME_DESC || m_sort_mode == S_TIME_ASC; }
+
     size_t EnterSubGroup(size_t index);
 
     FileType GetFileType() const { return m_file_type; }
@@ -264,6 +277,8 @@ public:
     void CancelUploadTask(bool send_cancel_req = true);
 
 private:
+    void SortFiles(FileList &list) const;
+
     void BuildGroups();
 
     void UpdateGroupSelect();
@@ -374,6 +389,7 @@ protected:
     FileType m_file_type = F_INVALID_TYPE;
     std::string m_file_storage;
     GroupMode m_group_mode = G_NONE;
+    SortMode m_sort_mode = S_TIME_DESC;
     FileList m_file_list;
     std::map<std::pair<FileType, std::string>, FileList> m_file_list_cache;
     std::vector<size_t> m_group_year;

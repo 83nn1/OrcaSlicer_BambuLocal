@@ -21,20 +21,35 @@ Der Speicher-Tab holt die Dateien normalerweise über einen Tunnel des Bambu-Net
 | Zeitraffer-Vorschaubilder | `/timelapse/thumbnail/<name>.jpg` |
 | Herunterladen | `RETR`, in Blöcken mit MD5-Prüfung, abbrechbar |
 | Löschen | `DELE` (bei Zeitraffern samt Vorschaubild) |
+| Datum der Druckaufträge | Zeitstempel im Kopf der `.3mf` (siehe unten) |
+
+### Datum der Druckaufträge
+
+Im LAN-Only-Modus hat der Drucker keine verlässliche Uhr: Nach jedem Aus- und Einschalten läuft sie von einem alten Datum weiter. Die Dateizeiten auf der SD-Karte sind dadurch unbrauchbar, bei einem P1S z. B. fast alle zwischen 13. und 19. März.
+
+Jede `.3mf`, die OrcaSlicer oder Bambu Studio exportiert, enthält aber im ZIP-Kopf die Uhrzeit des PCs beim Slicen. Dieser Kopf steht in den ersten 30 Bytes der Datei. Der Tunnel liest deshalb von jeder Datei nur die ersten 64 Bytes, im Hintergrund, wenn sonst nichts zu tun ist. Danach lädt die Liste einmal neu, mit den richtigen Zeiten. Die Zeiten werden in `%TEMP%\orca_lan_storage\job_times.json` gespeichert, ab dem zweiten Öffnen stimmen sie sofort. Dateien ohne diesen Zeitstempel behalten die Zeit des Druckers.
+
+Einschränkung: Das ist der Zeitpunkt des Slicens. Wird eine Datei später direkt am Drucker erneut gedruckt, ändert sich das Datum nicht.
+
+## Sortierung
+
+Neben „Aktualisieren“ gibt es eine Auswahl für die Reihenfolge: neueste zuerst (Standard), älteste zuerst, Name A bis Z, Name Z bis A. Die Namenssortierung ignoriert Groß-/Kleinschreibung und Umlaute (ä wie a) und vergleicht Zahlen nach Wert (`plate_2` vor `plate_10`). Die Auswahl gilt für alle Drucker und bleibt gespeichert. Nach Name sortiert ist die Gruppierung nach Jahr/Monat (Zeitraffer) nicht verfügbar.
 
 Da die Anfragen identisch sind, bleibt die übrige Oberfläche (`MediaFilePanel`, `PrinterFileSystem`) unverändert. `MediaFilePanel` wählt den FTPS-Weg nur, wenn der Drucker im LAN-Only-Modus ist **und** keinen lokalen Dateidienst meldet. Drucker, die Orca schon über das Plugin bedienen kann (z. B. X1 im LAN-Modus, alle Drucker im Cloud-Modus), nutzen weiter den bisherigen Weg.
 
 Geänderte Dateien:
 
 - `src/slic3r/GUI/Printer/LanFtpsTunnel.cpp/.hpp` (neu)
-- `src/slic3r/GUI/Printer/PrinterFileSystem.cpp/.h`: wählt bei `lanftps://`-URLs den FTPS-Tunnel
-- `src/slic3r/GUI/MediaFilePanel.cpp/.h`: LAN-Only-Zweig in `fetchUrl()`, Download-Knopf für Modelle
+- `src/slic3r/GUI/Printer/PrinterFileSystem.cpp/.h`: wählt bei `lanftps://`-URLs den FTPS-Tunnel, Sortierung, Neuladen nach dem Lernen der Zeiten
+- `src/slic3r/GUI/MediaFilePanel.cpp/.h`: LAN-Only-Zweig in `fetchUrl()`, Download-Knopf für Modelle, Sortierauswahl
+- `src/slic3r/GUI/ImageGrid.cpp/.h`: Datumsbereich nur bei Sortierung nach Zeit, nach oben scrollen bei neuer Sortierung
+- `localization/i18n/de/OrcaSlicer_de.po`: deutsche Texte für die Sortierauswahl
 - `src/slic3r/CMakeLists.txt`
 
 ## Stand
 
 - Gegen einen nachgebauten Drucker-FTPS-Server getestet: Dateiliste, Umlaute und Leerzeichen in Dateinamen, Vorschaubilder, Downloads mit MD5-Prüfung, Abbrechen, Löschen, falscher Access Code.
-- Am echten P1S noch nicht getestet.
+- Am echten P1S getestet: Dateiliste, Vorschaubilder, Druckzeit und Gewicht funktionieren.
 - Ob „Drucken“ aus dem Modell-Tab (Orcas Druck-von-SD-Dialog) im LAN-Modus durchläuft, ist offen.
 - Hochladen auf die SD-Karte aus dem Speicher-Tab ist nicht umgesetzt.
 

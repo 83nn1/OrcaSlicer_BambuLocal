@@ -7326,6 +7326,26 @@ msgstr "Dateien nach Monat gruppieren, neueste zuerst."
 msgid "Show all files, recent first."
 msgstr "Alle Dateien anzeigen, die neuesten zuerst."
 
+# AI Translated
+msgid "Newest first"
+msgstr "Neueste zuerst"
+
+# AI Translated
+msgid "Oldest first"
+msgstr "Älteste zuerst"
+
+# AI Translated
+msgid "Name (A to Z)"
+msgstr "Name (A bis Z)"
+
+# AI Translated
+msgid "Name (Z to A)"
+msgstr "Name (Z bis A)"
+
+# AI Translated
+msgid "Sort order of the files."
+msgstr "Sortierreihenfolge der Dateien."
+
 msgid "Timelapse"
 msgstr "Zeitraffer"
 

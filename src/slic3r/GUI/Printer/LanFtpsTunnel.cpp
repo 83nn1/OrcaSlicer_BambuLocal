@@ -67,6 +67,8 @@ constexpr int         FTPS_PORT       = 990;
 constexpr size_t      CHUNK_SIZE      = 256 * 1024;
 constexpr size_t      MAX_QUEUED      = 32;
 constexpr uintmax_t   CACHE_MAX_BYTES = 512ull * 1024 * 1024;
+constexpr int         LIST_RESYNC_NOTIFY = 0x0101;
+constexpr uint32_t    NO_REQUEST         = 0xFFFFFFFFu;
 
 std::string url_decode(std::string const &s)
 {
@@ -202,6 +204,34 @@ bool parse_list_line(std::string line, Entry &e)
     return true;
 }
 
+// The printer has no reliable clock in LAN only mode (it restarts from an old
+// date after every power cycle), so the modification time of the files on the
+// storage is useless for sorting. Every entry of a 3mf written by OrcaSlicer or
+// Bambu Studio carries the local time of the PC at export (slicing) instead,
+// starting with the local file header at offset 0 of the file.
+constexpr size_t ZIP_HEADER_SIZE = 30;
+
+time_t zip_entry_time(unsigned char const *p, size_t size)
+{
+    if (size < ZIP_HEADER_SIZE || p[0] != 'P' || p[1] != 'K' || p[2] != 3 || p[3] != 4)
+        return 0;
+    unsigned dos_time = p[10] | (p[11] << 8);
+    unsigned dos_date = p[12] | (p[13] << 8);
+    std::tm  tm{};
+    tm.tm_year  = int(dos_date >> 9) + 80;
+    tm.tm_mon   = int((dos_date >> 5) & 15) - 1;
+    tm.tm_mday  = int(dos_date & 31);
+    tm.tm_hour  = int(dos_time >> 11);
+    tm.tm_min   = int((dos_time >> 5) & 63);
+    tm.tm_sec   = int(dos_time & 31) * 2;
+    tm.tm_isdst = -1;
+    if (tm.tm_mon < 0 || tm.tm_mon > 11 || tm.tm_mday == 0 || tm.tm_year < 110)
+        return 0;
+    time_t t = mktime(&tm);
+    // the zip time is local time of the slicing PC, assume ours
+    return t > 0 && t < ::time(nullptr) + 2 * 86400 ? t : 0;
+}
+
 std::string md5_hex(MD5_CTX &ctx)
 {
     unsigned char digest[MD5_DIGEST_LENGTH];
@@ -260,6 +290,7 @@ public:
             return ERROR_PIPE;
         }
         BOOST_LOG_TRIVIAL(info) << "LanFtps: connected to " << m_host;
+        load_job_times();
         m_worker = std::thread([this] { run(); });
         return 0;
     }
@@ -335,8 +366,14 @@ private:
             json req;
             {
                 std::unique_lock<std::mutex> l(m_mutex);
-                m_cond.wait(l, [this] { return m_stopping || !m_requests.empty(); });
+                // requests first, missing job times only while idle
+                m_cond.wait(l, [this] { return m_stopping || !m_requests.empty() || !m_pending_times.empty(); });
                 if (m_stopping) return;
+                if (m_requests.empty()) {
+                    l.unlock();
+                    fetch_next_job_time();
+                    continue;
+                }
                 req = std::move(m_requests.front());
                 m_requests.pop_front();
             }
@@ -372,6 +409,19 @@ private:
         std::unique_lock<std::mutex> l(m_mutex);
         if (throttle)
             m_cond.wait(l, [this] { return m_stopping || m_responses.size() < MAX_QUEUED; });
+        m_responses.push_back(std::move(s));
+    }
+
+    // Unsolicited message, handled by PrinterFileSystem's notify handlers
+    void push_notify(int type, json const &notify)
+    {
+        json root;
+        root["cmdtype"]  = type;
+        root["sequence"] = 0;
+        root["notify"]   = notify;
+        std::string s    = root.dump(-1, ' ', false, json::error_handler_t::replace);
+        s += "\n\n";
+        std::lock_guard<std::mutex> l(m_mutex);
         m_responses.push_back(std::move(s));
     }
 
@@ -688,6 +738,134 @@ private:
         return "";
     }
 
+    // ---------------------------------------------------------------- job times
+
+    static std::string job_time_key(Entry const &e) { return e.path + "|" + std::to_string(e.size) + "|" + std::to_string(e.time); }
+
+    fs::path job_times_file() const { return cache_dir() / "job_times.json"; }
+
+    // {"<host>": {"<path>|<size>|<printer time>": <job time, 0 = unknown>}}
+    void load_job_times()
+    {
+        try {
+            fs::ifstream ifs(job_times_file());
+            if (!ifs) return;
+            json root = json::parse(ifs);
+            if (root.contains(m_host))
+                for (auto &item : root[m_host].items())
+                    m_job_times[item.key()] = item.value().get<int64_t>();
+        } catch (std::exception const &e) {
+            BOOST_LOG_TRIVIAL(info) << "LanFtps: ignoring job time cache: " << e.what();
+        }
+    }
+
+    void save_job_times()
+    {
+        try {
+            json root;
+            {
+                fs::ifstream ifs(job_times_file());
+                if (ifs) root = json::parse(ifs, nullptr, false);
+                if (!root.is_object()) root = json::object();
+            }
+            // keep only the files that are still on the printer
+            json mine = json::object();
+            for (auto &k : m_known) {
+                auto it = m_job_times.find(job_time_key(k.second));
+                if (it != m_job_times.end()) mine[it->first] = it->second;
+            }
+            root[m_host] = mine;
+            fs::path tmp = job_times_file();
+            tmp += ".tmp";
+            {
+                fs::ofstream ofs(tmp, std::ios::trunc);
+                ofs << root.dump(-1, ' ', false, json::error_handler_t::replace);
+            }
+            boost::system::error_code ec;
+            fs::rename(tmp, job_times_file(), ec);
+        } catch (std::exception const &e) {
+            BOOST_LOG_TRIVIAL(info) << "LanFtps: saving job time cache failed: " << e.what();
+        }
+    }
+
+    // Time to show and sort by: when the job was sliced, else the printer's file time
+    time_t job_time(Entry const &e)
+    {
+        if (!ends_with_ci(e.name, ".3mf")) return e.time;
+        auto key = job_time_key(e);
+        auto it  = m_job_times.find(key);
+        if (it == m_job_times.end()) {
+            // a model fetched for its thumbnail before has it locally
+            boost::system::error_code ec;
+            fs::path                  local = cache_path(e.path);
+            if (fs::exists(local, ec) && fs::file_size(local, ec) == e.size) {
+                unsigned char buf[ZIP_HEADER_SIZE] = {};
+                fs::ifstream  ifs(local, std::ios::binary);
+                ifs.read(reinterpret_cast<char *>(buf), sizeof(buf));
+                it = m_job_times.emplace(key, int64_t(zip_entry_time(buf, size_t(ifs.gcount())))).first;
+                m_job_times_changed = true;
+            }
+        }
+        if (it == m_job_times.end()) {
+            if (!m_job_times_disabled) {
+                std::lock_guard<std::mutex> l(m_mutex);
+                m_pending_times.push_back(e);
+            }
+            return e.time;
+        }
+        return it->second > 0 ? time_t(it->second) : e.time;
+    }
+
+    // Reads the start of one model file, one at a time while there is nothing else to do
+    void fetch_next_job_time()
+    {
+        Entry e;
+        bool  last = false;
+        {
+            std::lock_guard<std::mutex> l(m_mutex);
+            if (m_pending_times.empty()) return;
+            e = m_pending_times.front();
+            m_pending_times.pop_front();
+            last = m_pending_times.empty();
+        }
+        m_seq = NO_REQUEST;
+        if (m_job_times.find(job_time_key(e)) == m_job_times.end()) {
+            std::string head;
+            Sink        sink{[&head](char const *p, size_t n) {
+                if (head.size() < 64) head.append(p, (std::min)(n, 64 - head.size()));
+                return true;
+            }};
+            prepare(remote_url(e.path));
+            // only the first bytes: RETR is aborted after them
+            curl_easy_setopt(m_curl, CURLOPT_RANGE, "0-63");
+            curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, &Tunnel::write_cb);
+            curl_easy_setopt(m_curl, CURLOPT_WRITEDATA, &sink);
+            CURLcode res = curl_easy_perform(m_curl);
+            if (head.size() >= ZIP_HEADER_SIZE) {
+                m_job_times[job_time_key(e)] = int64_t(zip_entry_time(reinterpret_cast<unsigned char const *>(head.data()), head.size()));
+                m_job_times_changed          = true;
+                m_job_time_errors            = 0;
+            } else if (map_error(res) == ERROR_PIPE) {
+                BOOST_LOG_TRIVIAL(info) << "LanFtps: reading start of " << e.path << " failed: " << curl_easy_strerror(res);
+                if (++m_job_time_errors >= 3) {
+                    // the printer does not like it, use its file times for this session
+                    m_job_times_disabled = true;
+                    std::lock_guard<std::mutex> l(m_mutex);
+                    m_pending_times.clear();
+                    last = true;
+                }
+            } else {
+                m_job_times[job_time_key(e)] = 0; // not a zip, nothing to learn
+            }
+        }
+        if (last && m_job_times_changed) {
+            m_job_times_changed = false;
+            save_job_times();
+            // let the storage browser reload the list with the better times
+            push_notify(LIST_RESYNC_NOTIFY, json{{"type", "model"}});
+        }
+    }
+
     // ---------------------------------------------------------------- requests
 
     void list_info(uint32_t seq, json const &req)
@@ -705,6 +883,10 @@ private:
         json files = json::array();
         int  ok    = 0;
         int  error = 0;
+        {
+            std::lock_guard<std::mutex> l(m_mutex);
+            m_pending_times.clear();
+        }
         for (auto &dir : dirs) {
             std::vector<Entry> entries;
             int                res = list_dir(dir, entries);
@@ -724,7 +906,7 @@ private:
                 json f;
                 f["name"] = e.name;
                 f["path"] = e.path;
-                f["time"] = e.time;
+                f["time"] = job_time(e);
                 f["size"] = e.size;
                 files.push_back(f);
             }
@@ -736,6 +918,16 @@ private:
         json reply;
         reply["file_lists"] = files;
         push(seq, SUCCESS, reply);
+        if (m_job_times_changed && pending_times_empty()) {
+            m_job_times_changed = false;
+            save_job_times();
+        }
+    }
+
+    bool pending_times_empty() const
+    {
+        std::lock_guard<std::mutex> l(m_mutex);
+        return m_pending_times.empty();
     }
 
     void sub_file(uint32_t seq, json const &req)
@@ -928,6 +1120,12 @@ private:
     std::thread             m_worker;
 
     std::map<std::string, Entry> m_known; // worker thread only
+
+    std::map<std::string, int64_t> m_job_times; // worker thread only
+    std::deque<Entry>              m_pending_times;
+    bool                           m_job_times_changed  = false;
+    bool                           m_job_times_disabled = false;
+    int                            m_job_time_errors    = 0;
 };
 
 Tunnel *as_tunnel(Bambu_Tunnel t) { return static_cast<Tunnel *>(t); }
