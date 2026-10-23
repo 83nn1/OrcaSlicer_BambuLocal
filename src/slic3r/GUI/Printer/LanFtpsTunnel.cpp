@@ -245,6 +245,18 @@ std::string md5_hex(MD5_CTX &ctx)
     return out;
 }
 
+// Printers that are printing. Reading previews means downloading whole model
+// files, which keeps a P1 / A1 so busy while it prints that it stops answering
+// MQTT for minutes. The GUI marks them here, see set_printer_busy().
+std::mutex            g_busy_mutex;
+std::set<std::string> g_busy_hosts;
+
+bool printer_busy(std::string const &host)
+{
+    std::lock_guard<std::mutex> l(g_busy_mutex);
+    return g_busy_hosts.count(host) > 0;
+}
+
 class Tunnel
 {
 public:
@@ -371,10 +383,20 @@ private:
             json req;
             {
                 std::unique_lock<std::mutex> l(m_mutex);
-                // requests first, missing job times only while idle
-                m_cond.wait(l, [this] { return m_stopping || !m_requests.empty() || !m_pending_times.empty(); });
+                // requests first; deferred previews and missing job times only while
+                // idle and the printer is not printing (polled, busy has no notification)
+                m_cond.wait_for(l, std::chrono::seconds(1), [this] { return m_stopping || !m_requests.empty(); });
                 if (m_stopping) return;
                 if (m_requests.empty()) {
+                    if (printer_busy(m_host)) continue;
+                    if (!m_deferred.empty()) {
+                        BOOST_LOG_TRIVIAL(info) << "LanFtps: printer idle, loading deferred previews";
+                        for (auto &r : m_deferred)
+                            if (m_cancelled.count(r.value("sequence", 0u)) == 0) m_requests.push_back(std::move(r));
+                        m_deferred.clear();
+                        continue;
+                    }
+                    if (m_pending_times.empty()) continue;
                     l.unlock();
                     fetch_next_job_time();
                     continue;
@@ -384,6 +406,13 @@ private:
             }
             int      type = req.value("cmdtype", 0);
             uint32_t seq  = req.value("sequence", 0u);
+            if (type == SUB_FILE && printer_busy(m_host) && !all_cached(req["req"])) {
+                // previews wait until the print is over, PrinterFileSystem waits for the answer
+                BOOST_LOG_TRIVIAL(info) << "LanFtps: printer is printing, preview deferred";
+                std::lock_guard<std::mutex> l(m_mutex);
+                if (m_cancelled.count(seq) == 0) m_deferred.push_back(std::move(req));
+                continue;
+            }
             m_seq         = seq;
             try {
                 if (type == FILE_DOWNLOAD && req["req"].value("path", "").rfind("mem:/", 0) == 0)
@@ -671,15 +700,38 @@ private:
         }
     }
 
-    // Makes sure the model file is available locally, returns 0 on success
-    int ensure_cached(std::string const &path, fs::path &local)
+    // Is the model file available locally? local is set either way
+    bool is_cached(std::string const &path, fs::path &local, uint64_t &expected)
     {
         local = cache_path(path);
         boost::system::error_code ec;
+        auto                      it = m_known.find(path);
+        expected                     = it != m_known.end() ? it->second.size : 0;
+        return fs::exists(local, ec) && (expected == 0 || fs::file_size(local, ec) == expected);
+    }
+
+    // Can a SUB_FILE request be answered without reading from the printer?
+    bool all_cached(json const &req)
+    {
+        if (!req.contains("paths")) return false;
+        for (auto &p : req["paths"]) {
+            std::string path = p.get<std::string>();
+            auto        n    = path.find('#');
+            std::string sub  = n == std::string::npos ? std::string() : path.substr(n + 1);
+            fs::path    local;
+            uint64_t    expected = 0;
+            // timelapse thumbnails are separate files on the printer
+            if (sub.empty() || sub == "thumbnail" || !is_cached(path.substr(0, n), local, expected)) return false;
+        }
+        return true;
+    }
+
+    // Makes sure the model file is available locally, returns 0 on success
+    int ensure_cached(std::string const &path, fs::path &local)
+    {
+        boost::system::error_code ec;
         uint64_t                  expected = 0;
-        auto                      it       = m_known.find(path);
-        if (it != m_known.end()) expected = it->second.size;
-        if (fs::exists(local, ec) && (expected == 0 || fs::file_size(local, ec) == expected))
+        if (is_cached(path, local, expected))
             return 0;
         fs::path            tmp = local;
         tmp += ".part";
@@ -1159,6 +1211,12 @@ private:
     // Finds the job's 3mf among the candidate paths and makes it available locally
     int find_project(json const &candidates, fs::path &local)
     {
+        // the dialog asks for three files in a row, look the job file up once for them
+        auto now = std::chrono::steady_clock::now();
+        if (!m_job_path.empty() && m_job_candidates == candidates && now - m_job_found < std::chrono::seconds(30))
+            return ensure_cached(m_job_path, local);
+        m_job_path.clear();
+
         std::map<std::string, std::vector<Entry>> listed; // LIST each directory once
         for (auto &c : candidates) {
             if (!c.is_string()) continue;
@@ -1176,7 +1234,13 @@ private:
                 // size and time tell a new upload of the same name from the cached one
                 m_known[e.path] = e;
                 BOOST_LOG_TRIVIAL(info) << "LanFtps: job file " << path;
-                return ensure_cached(path, local);
+                int res = ensure_cached(path, local);
+                if (res == 0) {
+                    m_job_path       = path;
+                    m_job_candidates = candidates;
+                    m_job_found      = now;
+                }
+                return res;
             }
         }
         BOOST_LOG_TRIVIAL(info) << "LanFtps: job file not found on the storage";
@@ -1231,6 +1295,7 @@ private:
     mutable std::mutex      m_mutex;
     std::condition_variable m_cond;
     std::deque<json>        m_requests;
+    std::deque<json>        m_deferred; // previews requested while the printer prints
     std::deque<std::string> m_responses;
     std::string             m_current;
     std::set<uint32_t>      m_cancelled;
@@ -1239,6 +1304,11 @@ private:
     std::thread             m_worker;
 
     std::map<std::string, Entry> m_known; // worker thread only
+
+    // job file of the part skip dialog, worker thread only
+    std::string                           m_job_path;
+    json                                  m_job_candidates;
+    std::chrono::steady_clock::time_point m_job_found;
 
     std::map<std::string, int64_t> m_job_times; // worker thread only
     std::deque<Entry>              m_pending_times;
@@ -1256,6 +1326,16 @@ bool is_url(char const *url) { return url && strncmp(url, SCHEME, strlen(SCHEME)
 std::string make_url(std::string const &ip, std::string const &user, std::string const &passwd)
 {
     return std::string(SCHEME) + ip + "?user=" + url_encode(user) + "&passwd=" + url_encode(passwd);
+}
+
+void set_printer_busy(std::string const &ip, bool busy)
+{
+    if (ip.empty()) return;
+    std::lock_guard<std::mutex> l(g_busy_mutex);
+    if (busy)
+        g_busy_hosts.insert(ip);
+    else
+        g_busy_hosts.erase(ip);
 }
 
 int create(Bambu_Tunnel *tunnel, char const *url)

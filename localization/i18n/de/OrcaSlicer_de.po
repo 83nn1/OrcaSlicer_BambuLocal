@@ -7346,6 +7346,10 @@ msgstr "Name (Z bis A)"
 msgid "Sort order of the files."
 msgstr "Sortierreihenfolge der Dateien."
 
+# AI Translated
+msgid "Previews are not loaded while the printer is printing, so that the printer is not overloaded."
+msgstr "Während eines laufenden Drucks werden keine Vorschaubilder geladen, damit der Drucker nicht überlastet wird."
+
 msgid "Timelapse"
 msgstr "Zeitraffer"
 

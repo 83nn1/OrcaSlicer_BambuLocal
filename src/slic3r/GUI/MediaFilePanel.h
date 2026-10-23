@@ -87,6 +87,7 @@ private:
     ::ComboBox *m_sort_box = nullptr;
 
     ImageGrid * m_image_grid   = nullptr;
+    ::Label *   m_preview_hint = nullptr; // previews wait while a LAN only printer prints
 
     bool m_external = true;
 

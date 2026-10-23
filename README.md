@@ -34,6 +34,12 @@ Jede `.3mf`, die OrcaSlicer oder Bambu Studio exportiert, enthält aber im ZIP-K
 
 Einschränkung: Das ist der Zeitpunkt des Slicens. Wird eine Datei später direkt am Drucker erneut gedruckt, ändert sich das Datum nicht.
 
+### Während eines Drucks
+
+Für Vorschaubilder, Druckzeit und Gewicht lädt der Speicher-Tab jede `.3mf` komplett herunter. Das belastet einen P1S während des Drucks so stark, dass er minutenlang keine MQTT-Meldungen mehr schickt und Orca ihn als getrennt anzeigt (beobachtet beim Druckstart).
+
+Solange der Drucker druckt (auch Vorbereiten und Pause), lädt der Tunnel deshalb keine Vorschaubilder vom Drucker und liest keine Druckdaten nach. Bereits zwischengespeicherte Vorschauen werden weiter angezeigt, die übrigen kommen nach dem Druck von selbst. Über der Dateiliste steht dann ein Hinweis. Dateiliste, Herunterladen und Löschen funktionieren weiter.
+
 ## Sortierung
 
 Neben „Aktualisieren“ gibt es eine Auswahl für die Reihenfolge: neueste zuerst (Standard), älteste zuerst, Name A bis Z, Name Z bis A. Die Namenssortierung ignoriert Groß-/Kleinschreibung und Umlaute (ä wie a) und vergleicht Zahlen nach Wert (`plate_2` vor `plate_10`). Die Auswahl gilt für alle Drucker und bleibt gespeichert. Nach Name sortiert ist die Gruppierung nach Jahr/Monat (Zeitraffer) nicht verfügbar.
@@ -55,7 +61,7 @@ Orca enthält den Dialog „Teile überspringen“ aus Bambu Studio. Bei P1/A1 i
 
 Jetzt erscheint der Knopf neben Pause/Stopp, sobald der Drucker über FTPS angebunden ist (gleiche Bedingung wie beim Speicher-Tab). Der Dialog liest `Metadata/pick_<platte>.png`, `model_settings.config` und `slice_info.config` aus der `.3mf` des laufenden Drucks auf der SD-Karte. Gesucht wird sie anhand von `gcode_file` und `subtask_name` aus dem Druckerstatus in `/`, `/cache` und `/model`. Das Überspringen selbst ist der MQTT-Befehl `skip_objects`, den der Drucker auch im LAN-Modus annimmt.
 
-Meldet der Drucker die Plattennummer nicht, gilt die einzige Platte mit G-Code in der Datei.
+Meldet der Drucker die Plattennummer nicht, gilt die einzige Platte mit G-Code in der Datei. Die Druckdatei wird pro Öffnen des Dialogs nur einmal gesucht.
 
 Voraussetzungen: „Objekte beschriften“ (Label objects) war beim Slicen aktiv, und die Teile sind nicht zu einem Objekt zusammengeführt.
 
@@ -67,7 +73,7 @@ Geänderte Dateien: `LanFtpsTunnel.cpp/.hpp` (Anfrage `get_project_file`), `Prin
 - Am echten P1S getestet: Dateiliste, Vorschaubilder, Druckzeit und Gewicht funktionieren.
 - Ob „Drucken“ aus dem Modell-Tab (Orcas Druck-von-SD-Dialog) im LAN-Modus durchläuft, ist offen.
 - Hochladen auf die SD-Karte aus dem Speicher-Tab ist nicht umgesetzt.
-- Objekte überspringen: gegen den nachgebauten FTPS-Server getestet (Suche der Druckdatei, Vorschaubild > 256 KB in Blöcken, MD5, Platten-Fallback, fehlende Datei). Am echten P1S noch nicht getestet.
+- Objekte überspringen: gegen den nachgebauten FTPS-Server getestet (Suche der Druckdatei, Vorschaubild > 256 KB in Blöcken, MD5, Platten-Fallback, fehlende Datei). Am echten P1S getestet: Überspringen funktioniert, der Drucker bestätigt `skip_objects`.
 
 ## Bauen
 

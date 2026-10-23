@@ -174,6 +174,12 @@ MediaFilePanel::MediaFilePanel(wxWindow * parent)
 
     sizer->Add(top_sizer, 0, wxEXPAND);
 
+    m_preview_hint = new Label(this, Label::Body_13,
+                               _L("Previews are not loaded while the printer is printing, so that the printer is not overloaded."), LB_AUTO_WRAP);
+    m_preview_hint->SetForegroundColour(wxColour(107, 107, 107));
+    m_preview_hint->Hide();
+    sizer->Add(m_preview_hint, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(12));
+
     m_image_grid = new ImageGrid(this);
     m_image_grid->Bind(EVT_ITEM_ACTION, [this](wxCommandEvent &e) { doAction(size_t(e.GetExtraLong()), e.GetInt()); });
     m_image_grid->SetStatus(m_bmp_failed, _L("No printers."));
@@ -279,6 +285,14 @@ void MediaFilePanel::UpdateByObj(MachineObject* obj)
         m_remote_proto = obj->get_file_remote();
         m_model_download_support = obj->file_model_download || use_lan_ftps();
 
+        // a P1 / A1 serving previews over FTPS while it prints stops answering MQTT
+        bool printing = use_lan_ftps() && obj->is_in_printing();
+        Slic3r::LanFtps::set_printer_busy(m_lan_ip, printing);
+        if (m_preview_hint->IsShown() != printing) {
+            m_preview_hint->Show(printing);
+            Layout();
+        }
+
         if (m_sdcard_exist != (obj->GetStorage()->get_sdcard_state() == DevStorage::HAS_SDCARD_NORMAL)) {
             m_sdcard_exist = obj->GetStorage()->get_sdcard_state() == DevStorage::HAS_SDCARD_NORMAL;
             sdcard_state_changed = true;
@@ -292,6 +306,10 @@ void MediaFilePanel::UpdateByObj(MachineObject* obj)
         m_local_proto = 0;
         m_remote_proto = 0;
         m_model_download_support = false;
+        if (m_preview_hint->IsShown()) {
+            m_preview_hint->Hide();
+            Layout();
+        }
 
         if (m_sdcard_exist) {
             m_sdcard_exist = false; // reset sdcard state when no object
