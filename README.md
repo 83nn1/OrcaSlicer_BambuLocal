@@ -45,7 +45,13 @@ Solange der Drucker druckt (auch Vorbereiten und Pause), lädt der Tunnel deshal
 
 In der Ansicht *Modell* gibt es den Knopf „Hochladen“ (nur über FTPS, also bei P1/A1 im LAN-Only-Modus). Er lädt eine `.gcode.3mf` vom PC ins Hauptverzeichnis der SD-Karte, dorthin, wo auch Bambu Studio gesendete Dateien ablegt. Gibt es dort schon eine Datei mit dem Namen, fragt Orca vor dem Ersetzen nach.
 
-`PrinterFileSystem` schickt die Datei in Blöcken von 256 KB, ohne auf Antworten zu warten. Der Tunnel puffert höchstens 4 MB davon und reicht sie an ein einziges `STOR` weiter. Danach vergleicht er die Größe auf dem Drucker (`SIZE`) und die MD5-Summe. Schlägt das fehl, wird abgebrochen oder kommen 30 Sekunden lang keine Daten, löscht er die unvollständige Datei wieder, damit sie nicht als druckbarer Auftrag in der Liste steht.
+`PrinterFileSystem` schickt die Datei in Blöcken von 256 KB, ohne auf Antworten zu warten. Der Tunnel puffert höchstens 4 MB davon und reicht sie an ein einziges `STOR` weiter. Danach vergleicht er die Größe in der Dateiliste des Druckers und die MD5-Summe. Schlägt das fehl, wird abgebrochen oder kommen 30 Sekunden lang keine Daten, löscht er die unvollständige Datei wieder, damit sie nicht als druckbarer Auftrag in der Liste steht.
+
+Eine Kopie der hochgeladenen Datei landet gleich im Zwischenspeicher der Vorschauen. Die neu geladene Liste muss die Datei deshalb nicht wieder vom Drucker holen, um Vorschaubild und Datum anzuzeigen.
+
+### Verbindung nach FTPS-Last
+
+Auch ohne Druck schickt ein P1S unter FTPS-Last (Vorschauen laden, Hochladen) mitunter über 30 Sekunden keine MQTT-Meldungen. Beobachtet wurde, dass er danach stumm bleibt, bis die Verbindung neu aufgebaut wird, während er sich per SSDP weiter meldet. Orca verbindet sich bei einem über FTPS angebundenen Drucker deshalb selbst neu (wie bei erneuter Auswahl des Druckers), wenn 30 Sekunden keine Meldung kam, der Drucker per SSDP aber erreichbar ist. Höchstens einmal pro Minute, und nur wenn die Verbindung vorher Meldungen geliefert hat.
 
 ## Sortierung
 
@@ -79,7 +85,7 @@ Geänderte Dateien: `LanFtpsTunnel.cpp/.hpp` (Anfrage `get_project_file`), `Prin
 - Gegen einen nachgebauten Drucker-FTPS-Server getestet: Dateiliste, Umlaute und Leerzeichen in Dateinamen, Vorschaubilder, Downloads mit MD5-Prüfung, Abbrechen, Löschen, falscher Access Code.
 - Am echten P1S getestet: Dateiliste, Vorschaubilder, Druckzeit und Gewicht funktionieren.
 - Ob „Drucken“ aus dem Modell-Tab (Orcas Druck-von-SD-Dialog) im LAN-Modus durchläuft, ist offen.
-- Hochladen auf die SD-Karte aus dem Speicher-Tab: gegen den nachgebauten FTPS-Server getestet (5 MB, 60 MB, leere Datei byteidentisch; Abbrechen, falsche MD5, ins Stocken geratener Upload hinterlassen keine Datei; ungültiger Name). Am echten Drucker noch nicht getestet.
+- Hochladen auf die SD-Karte aus dem Speicher-Tab: gegen den nachgebauten FTPS-Server getestet (5 MB, 60 MB, leere Datei byteidentisch; Abbrechen, falsche MD5, ins Stocken geratener Upload hinterlassen keine Datei; ungültiger Name). Am echten P1S: Hochladen funktioniert, danach verlor Orca die MQTT-Verbindung (siehe [Verbindung nach FTPS-Last](#verbindung-nach-ftps-last)).
 - Objekte überspringen: gegen den nachgebauten FTPS-Server getestet (Suche der Druckdatei, Vorschaubild > 256 KB in Blöcken, MD5, Platten-Fallback, fehlende Datei). Am echten P1S getestet: Überspringen funktioniert, der Drucker bestätigt `skip_objects`.
 
 ## Bauen

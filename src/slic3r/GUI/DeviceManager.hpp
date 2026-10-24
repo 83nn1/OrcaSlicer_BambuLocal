@@ -286,7 +286,7 @@ public:
     std::string bind_state;     /* free | occupied */
     bool is_avaliable() { return bind_state == "free"; }
 
-    time_t last_alive;
+    time_t last_alive{0};
     bool m_is_online;
     bool m_lan_mode_connection_state{false};
     bool m_set_ctt_dlg{ false };

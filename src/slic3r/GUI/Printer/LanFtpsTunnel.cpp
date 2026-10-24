@@ -1206,6 +1206,11 @@ private:
         push(seq, CONTINUE, json{{"chunk_size", UPLOAD_CHUNK_KB}, {"offset", 0}});
 
         BOOST_LOG_TRIVIAL(info) << "LanFtps: uploading " << path << " (" << total << " bytes)";
+        // a copy for the cache: the list shown after the upload needs no download for
+        // the preview and job time, the printer is slow enough just after taking the file
+        boost::system::error_code ec;
+        fs::path                  copy = cache_dir() / "upload.part";
+        m_upload_copy.open(copy, std::ios::binary | std::ios::trunc);
         prepare(remote_url(path));
         curl_easy_setopt(m_curl, CURLOPT_UPLOAD, 1L);
         curl_easy_setopt(m_curl, CURLOPT_READFUNCTION, &Tunnel::read_cb);
@@ -1226,8 +1231,13 @@ private:
             expected_md5 = m_upload.md5;
             m_upload     = Upload{};
         }
+        bool copied = m_upload_copy.good();
+        m_upload_copy.close();
         m_known.erase(path); // the list has to fetch size and time again
-        if (stopping) return;
+        if (stopping) {
+            fs::remove(copy, ec);
+            return;
+        }
 
         int result = 0;
         if (cancelled()) {
@@ -1236,15 +1246,24 @@ private:
             BOOST_LOG_TRIVIAL(info) << "LanFtps: STOR " << path << " failed: " << curl_easy_strerror(res) << " (" << code << ")";
             result = upload_error(res, code);
         } else {
-            // also catches a data connection closed early, the printer's SIZE tells what arrived
-            uint64_t size = 0;
-            if (remote_size(path, size) != 0 || size != total) {
-                BOOST_LOG_TRIVIAL(info) << "LanFtps: " << path << " has " << size << " of " << total << " bytes after upload";
+            // also catches a data connection closed early, the listing tells what arrived.
+            // It also gives the printer's time of the file, which the cache key needs.
+            std::vector<Entry> entries;
+            if (list_dir("/", entries) != 0) entries.clear();
+            auto it = std::find_if(entries.begin(), entries.end(), [&path](Entry const &e) { return e.path == path; });
+            if (it == entries.end() || it->size != total) {
+                BOOST_LOG_TRIVIAL(info) << "LanFtps: " << path << " has " << (it == entries.end() ? 0 : it->size) << " of " << total
+                                        << " bytes after upload";
                 result = SEND_ERR;
             } else if (!expected_md5.empty() && lower(expected_md5) != lower(md5)) {
                 result = MD5_COMPARE_ERR;
+            } else if (copied) {
+                m_known[path] = *it;
+                fs::rename(copy, cache_path(path), ec);
+                if (!ec) prune_cache();
             }
         }
+        fs::remove(copy, ec); // left over when not moved to the cache
         if (result != 0) {
             // no partial file on the storage, it would look like a valid job. Nothing
             // sent: STOR was refused and a file of that name is still the old one.
@@ -1303,6 +1322,8 @@ private:
             u.fragments.pop_front();
             u.front_offset = 0;
         }
+        l.unlock();
+        m_upload_copy.write(buffer, std::streamsize(n));
         return n;
     }
 
@@ -1473,6 +1494,7 @@ private:
         MD5_CTX                 ctx;
         std::string             md5; // sent with the last fragment
     } m_upload;
+    fs::ofstream m_upload_copy; // worker thread only
 
     // job file of the part skip dialog, worker thread only
     std::string                           m_job_path;
