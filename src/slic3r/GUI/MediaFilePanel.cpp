@@ -454,7 +454,9 @@ void MediaFilePanel::UpdateByObj(MachineObject* obj)
             boost::shared_ptr fs(wfs.lock());
             if (fs == nullptr || m_image_grid->GetFileSystem() != fs || !m_upload_dlg)
                 return;
-            m_upload_dlg->Update(e.GetInt());
+            // never the maximum: there ProgressDialog::Update() waits in ShowModal(), and the
+            // upload done event destroys the dialog inside that loop
+            m_upload_dlg->Update((std::min)(e.GetInt(), 99));
         });
         fs->Bind(EVT_UPLOAD_CHANGED, [this, wfs = boost::weak_ptr(fs)](auto &e) {
             e.Skip();
