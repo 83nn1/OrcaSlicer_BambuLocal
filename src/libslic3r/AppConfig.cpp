@@ -691,9 +691,13 @@ void AppConfig::set_defaults()
     if (get("linear_deflection").empty()) {
         set("linear_deflection", "0.003");
     }
-    if (get("angle_deflection").empty()) {
-        set("angle_deflection", "0.5");
+    // BambuLocal: the default angle deflection is 0.1. Configs written before that still carry the
+    // old default 0.5, move them over once; afterwards the value is whatever the user last chose.
+    if (get("angle_deflection").empty() ||
+        (get("angle_deflection_default_v2").empty() && string_to_double_decimal_point(get("angle_deflection")) == 0.5)) {
+        set("angle_deflection", "0.1");
     }
+    set("angle_deflection_default_v2", "1");
     if (get("is_split_compound").empty()) {
         set_bool("is_split_compound", false);
     }

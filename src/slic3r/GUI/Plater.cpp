@@ -9785,7 +9785,7 @@ std::vector<size_t> Plater::priv::load_files(const std::vector<fs::path>& input_
                         double linear = string_to_double_decimal_point(wxGetApp().app_config->get("linear_deflection"));
                         if (linear <= 0) linear = 0.003;
                         double angle = string_to_double_decimal_point(wxGetApp().app_config->get("angle_deflection"));
-                        if (angle <= 0) angle = 0.5;
+                        if (angle <= 0) angle = 0.1;
                         bool split_compound = wxGetApp().app_config->get_bool("is_split_compound");
                         model = Slic3r::Model:: read_from_step(path.string(), strategy,
                         [&dlg, real_filename, &progress_percent, step_percent, INPUT_FILES_RATIO, total_files, i](int load_stage, int current, int total, bool &cancel)
@@ -11787,7 +11787,8 @@ bool Plater::priv::replace_volume_with_stl(int object_idx, int volume_idx, const
         if (is_step) {
             auto config = wxGetApp().app_config;
             double linear = std::max(0.003, string_to_double_decimal_point(config->get("linear_deflection")));
-            double angle = std::max(0.5, string_to_double_decimal_point(config->get("angle_deflection")));
+            double angle = string_to_double_decimal_point(config->get("angle_deflection"));
+            if (angle <= 0) angle = 0.1;
             bool split_compound = config->get_bool("is_split_compound");
             bool is_user_cancel = false;
 

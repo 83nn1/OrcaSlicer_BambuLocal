@@ -43,7 +43,7 @@ private:
     wxString m_angle_last;
     wxStaticText* mesh_face_number_text;
     double m_last_linear = 0.003;
-    double m_last_angle = 0.5;
+    double m_last_angle = 0.1;
     unsigned int m_mesh_number = 0;
     boost::thread* m_task {nullptr};
     bool validate_number_range(const wxString& value, double min, double max);

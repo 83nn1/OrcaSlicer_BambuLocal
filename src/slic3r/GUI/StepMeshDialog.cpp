@@ -315,10 +315,12 @@ StepMeshDialog::StepMeshDialog(wxWindow* parent, Slic3r::Step& file, double line
             if (m_checkbox->IsChecked()) {
                 wxGetApp().app_config->set_bool("enable_step_mesh_setting", false);
             }
+            // BambuLocal: the angle deflection is always remembered, so the next import (also after a restart)
+            // starts with the value used last.
+            wxGetApp().app_config->set("angle_deflection", float_to_string_decimal_point(get_angle_deflection(), 2));
             if (m_save_default_checkbox->IsChecked()) {
                 wxGetApp().app_config->set_bool("is_split_compound", m_split_compound_checkbox->GetValue());
                 wxGetApp().app_config->set("linear_deflection", float_to_string_decimal_point(get_linear_deflection(), 3));
-                wxGetApp().app_config->set("angle_deflection", float_to_string_decimal_point(get_angle_deflection(), 2));
             }
 
             EndModal(wxID_OK);

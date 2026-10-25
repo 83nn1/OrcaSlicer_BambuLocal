@@ -2410,7 +2410,7 @@ void ObjectList::load_modifier(const wxArrayString& input_files, ModelObject& mo
                 double linear  = string_to_double_decimal_point(wxGetApp().app_config->get("linear_deflection"));
                 if (linear <= 0) linear = 0.003;
                 double angle = string_to_double_decimal_point(wxGetApp().app_config->get("angle_deflection"));
-                if (angle <= 0) angle = 0.5;
+                if (angle <= 0) angle = 0.1;
                 bool split_compound = wxGetApp().app_config->get_bool("is_split_compound");
                 model = Model::read_from_step(
                     input_file, LoadStrategy::LoadModel, nullptr, nullptr,
