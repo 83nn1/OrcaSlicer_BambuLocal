@@ -19,7 +19,7 @@ set(SLIC3R_VERSION "02.08.01.55")
 # Version of this fork's builds, shown in the about dialog and in the names of the CI
 # artifacts. The patch number goes up with every build handed out for testing, the minor
 # number with every new pull request (0.0.1, 0.0.2, ... then 0.1.1).
-set(BambuLocal_VERSION "0.1.1")
+set(BambuLocal_VERSION "0.2.1")
 
 if (NOT DEFINED ORCA_UPDATER_SIG_KEY)
     set(ORCA_UPDATER_SIG_KEY "" CACHE STRING "Base64url encoded updater signature key")

@@ -80,6 +80,7 @@ constexpr uint32_t    NO_REQUEST         = 0xFFFFFFFFu;
 constexpr size_t      UPLOAD_CHUNK_KB    = 256;             // fragment size PrinterFileSystem sends
 constexpr size_t      UPLOAD_QUEUE_MAX   = 4 * 1024 * 1024; // fragments waiting for the FTPS connection
 constexpr int         UPLOAD_WAIT_SECS   = 30;              // no fragment for that long: give up
+constexpr uint64_t    SMALL_MODEL_SIZE   = 256 * 1024;      // read whole for a preview, see RemoteZip
 
 std::string url_decode(std::string const &s)
 {
@@ -256,8 +257,8 @@ std::string md5_hex(MD5_CTX &ctx)
     return out;
 }
 
-// Printers that are printing. Reading previews means downloading whole model
-// files, which keeps a P1 / A1 so busy while it prints that it stops answering
+// Printers that are printing. Reading previews means several transfers per model
+// file, which keeps a P1 / A1 so busy while it prints that it stops answering
 // MQTT for minutes. The GUI marks them here, see set_printer_busy().
 std::mutex            g_busy_mutex;
 std::set<std::string> g_busy_hosts;
@@ -267,6 +268,162 @@ bool printer_busy(std::string const &host)
     std::lock_guard<std::mutex> l(g_busy_mutex);
     return g_busy_hosts.count(host) > 0;
 }
+
+// Reads entries of a zip (3mf) on the printer without downloading all of it: the
+// central directory from the end of the file, then only the byte ranges of the
+// wanted entries. A preview needs a few small entries of a model file of several
+// MB, most of it G-code, and a P1 / A1 stops answering MQTT while its FTPS server
+// is busy. Every range is a transfer of its own, so entries close to each other
+// are fetched together.
+class RemoteZip
+{
+public:
+    // reads size bytes at offset into data, returns 0 or an error
+    using Fetch = std::function<int(uint64_t offset, uint64_t size, std::string &data)>;
+
+    static constexpr uint64_t TAIL_SIZE   = 64 * 1024; // end of the file, holds the central directory of a 3mf
+    static constexpr uint64_t MERGE_GAP   = 64 * 1024; // entries closer than that come in one transfer
+    static constexpr uint64_t EXTRA_SLACK = 1024;      // the local header's extra field is not in the directory
+    static constexpr uint64_t READ_AHEAD  = 16 * 1024;
+
+    RemoteZip(uint64_t size, Fetch fetch) : m_size(size), m_fetch(std::move(fetch)) { mz_zip_zero_struct(&m_zip); }
+    ~RemoteZip()
+    {
+        if (m_open) mz_zip_reader_end(&m_zip);
+    }
+
+    // 0, an error of the transfer, or FILE_TYPE_ERR for a file that is no zip
+    int open()
+    {
+        uint64_t tail = (std::min)(m_size, TAIL_SIZE);
+        if (int res = load(m_size - tail, tail)) return res;
+        m_zip.m_pRead      = &RemoteZip::read_cb;
+        m_zip.m_pIO_opaque = this;
+        m_open             = mz_zip_reader_init(&m_zip, m_size, 0);
+        if (m_error) return m_error;
+        return m_open ? 0 : FILE_TYPE_ERR;
+    }
+
+    std::vector<std::string> entry_names()
+    {
+        std::vector<std::string> names;
+        for (mz_uint i = 0; i < mz_zip_reader_get_num_files(&m_zip); ++i) {
+            char buf[256];
+            if (mz_zip_reader_get_filename(&m_zip, i, buf, sizeof(buf)) > 0) names.push_back(buf);
+        }
+        return names;
+    }
+
+    // Reads the given entries, missing ones are skipped
+    int read(std::vector<std::string> const &names, std::vector<std::pair<std::string, std::string>> &out)
+    {
+        std::vector<std::pair<std::string, mz_uint>>  found;
+        std::vector<std::pair<uint64_t, uint64_t>>    ranges; // [begin, end)
+        for (auto &name : names) {
+            int                      index = mz_zip_reader_locate_file(&m_zip, name.c_str(), nullptr, 0);
+            mz_zip_archive_file_stat stat;
+            if (index < 0 || !mz_zip_reader_file_stat(&m_zip, mz_uint(index), &stat)) continue;
+            found.emplace_back(name, mz_uint(index));
+            uint64_t end = stat.m_local_header_ofs + ZIP_HEADER_SIZE + name.size() + EXTRA_SLACK + stat.m_comp_size;
+            ranges.emplace_back(stat.m_local_header_ofs, (std::min)(end, m_size));
+        }
+        std::sort(ranges.begin(), ranges.end());
+        std::vector<std::pair<uint64_t, uint64_t>> merged;
+        for (auto &r : ranges) {
+            if (!merged.empty() && r.first <= merged.back().second + MERGE_GAP)
+                merged.back().second = (std::max)(merged.back().second, r.second);
+            else
+                merged.push_back(r);
+        }
+        for (auto &r : merged) {
+            // the end may be there already with the central directory
+            uint64_t end = r.second;
+            for (auto &b : m_blocks)
+                if (b.first > r.first && b.first < end && b.first + b.second.size() >= end) end = b.first;
+            if (!covered(r.first, end - r.first))
+                if (int res = load(r.first, end - r.first)) return res;
+        }
+        if (!ranges.empty()) m_first_header = ranges.front().first;
+        for (auto &f : found) {
+            size_t size = 0;
+            void  *p    = mz_zip_reader_extract_to_heap(&m_zip, f.second, &size, 0);
+            if (p) {
+                if (!m_error) out.emplace_back(f.first, std::string(static_cast<char *>(p), size));
+                mz_free(p);
+            }
+            if (m_error) return m_error;
+        }
+        return 0;
+    }
+
+    // Time of the first entry read, see zip_entry_time()
+    time_t entry_time() const
+    {
+        unsigned char header[ZIP_HEADER_SIZE];
+        if (m_first_header == NO_HEADER || !copy(m_first_header, header, sizeof(header))) return 0;
+        return zip_entry_time(header, sizeof(header));
+    }
+
+    size_t transfers() const { return m_transfers; }
+
+private:
+    static constexpr uint64_t NO_HEADER = ~uint64_t(0);
+
+    static size_t read_cb(void *opaque, mz_uint64 offset, void *buf, size_t n)
+    {
+        return static_cast<RemoteZip *>(opaque)->read_at(offset, buf, n);
+    }
+
+    size_t read_at(uint64_t offset, void *buf, size_t n)
+    {
+        if (n == 0 || m_error || offset + n > m_size) return 0;
+        if (!covered(offset, n)) {
+            // not planned, e.g. a local header with a large extra field
+            if ((m_error = load(offset, (std::min)((std::max)(uint64_t(n), READ_AHEAD), m_size - offset)))) return 0;
+        }
+        return copy(offset, buf, n) ? n : 0;
+    }
+
+    // Copies [offset, offset + n) from the blocks read so far, false if some is missing
+    bool copy(uint64_t offset, void *buf, size_t n) const
+    {
+        auto *out = static_cast<char *>(buf);
+        while (n > 0) {
+            auto it = std::find_if(m_blocks.begin(), m_blocks.end(),
+                                   [offset](auto &b) { return b.first <= offset && offset < b.first + b.second.size(); });
+            if (it == m_blocks.end()) return false;
+            size_t k = size_t((std::min)(uint64_t(n), it->first + it->second.size() - offset));
+            if (out) {
+                memcpy(out, it->second.data() + (offset - it->first), k);
+                out += k;
+            }
+            offset += k;
+            n -= k;
+        }
+        return true;
+    }
+
+    bool covered(uint64_t offset, uint64_t n) const { return copy(offset, nullptr, size_t(n)); }
+
+    int load(uint64_t offset, uint64_t n)
+    {
+        std::string data;
+        ++m_transfers;
+        if (int res = m_fetch(offset, n, data)) return res;
+        auto &b = m_blocks[offset];
+        if (data.size() > b.size()) b = std::move(data);
+        return 0;
+    }
+
+    uint64_t                        m_size;
+    Fetch                           m_fetch;
+    mz_zip_archive                  m_zip;
+    bool                            m_open = false;
+    int                             m_error = 0;
+    std::map<uint64_t, std::string> m_blocks;
+    uint64_t                        m_first_header = NO_HEADER;
+    size_t                          m_transfers    = 0;
+};
 
 class Tunnel
 {
@@ -658,6 +815,26 @@ private:
         return download(path, 0, [&data](char const *p, size_t n) { data.append(p, n); return true; }, received);
     }
 
+    // Reads size bytes at offset: RETR from that offset, aborted after them
+    int download_range(std::string const &path, uint64_t offset, uint64_t size, std::string &data)
+    {
+        data.clear();
+        Sink sink{[&data, size](char const *p, size_t n) {
+            data.append(p, size_t((std::min)(uint64_t(n), size - data.size())));
+            return true;
+        }};
+        std::string range = std::to_string(offset) + "-" + std::to_string(offset + size - 1);
+        prepare(remote_url(path));
+        curl_easy_setopt(m_curl, CURLOPT_RANGE, range.c_str());
+        curl_easy_setopt(m_curl, CURLOPT_WRITEFUNCTION, &Tunnel::write_cb);
+        curl_easy_setopt(m_curl, CURLOPT_WRITEDATA, &sink);
+        CURLcode res = curl_easy_perform(m_curl);
+        if (data.size() == size) return 0;
+        BOOST_LOG_TRIVIAL(info) << "LanFtps: RETR " << path << " " << range << " failed: " << curl_easy_strerror(res) << " ("
+                                << data.size() << " bytes)";
+        return res == CURLE_OK ? ERROR_PIPE : map_error(res);
+    }
+
     int remove(std::string const &path)
     {
         prepare(base_url() + "/");
@@ -685,16 +862,46 @@ private:
         return dir;
     }
 
-    fs::path cache_path(std::string const &path)
+    std::string cache_name(std::string const &path, std::string const &entry = {})
     {
         auto it = m_known.find(path);
         std::string key = m_host + "|" + path;
         if (it != m_known.end())
             key += "|" + std::to_string(it->second.size) + "|" + std::to_string(it->second.time);
+        if (!entry.empty()) key += "#" + entry;
         MD5_CTX ctx;
         MD5_Init(&ctx);
         MD5_Update(&ctx, key.data(), key.size());
-        return cache_dir() / (md5_hex(ctx) + ".3mf");
+        return md5_hex(ctx);
+    }
+
+    fs::path cache_path(std::string const &path) { return cache_dir() / (cache_name(path) + ".3mf"); }
+
+    // One entry of a model file read for a preview, empty if the file has no such entry
+    fs::path entry_cache_path(std::string const &path, std::string const &entry) { return cache_dir() / (cache_name(path, entry) + ".entry"); }
+
+    bool read_cached_entry(std::string const &path, std::string const &entry, std::string &data)
+    {
+        fs::ifstream ifs(entry_cache_path(path, entry), std::ios::binary);
+        if (!ifs) return false;
+        std::ostringstream oss;
+        oss << ifs.rdbuf();
+        data = oss.str();
+        return true;
+    }
+
+    void write_cached_entry(std::string const &path, std::string const &entry, std::string const &data)
+    {
+        fs::path local = entry_cache_path(path, entry);
+        fs::path tmp   = local;
+        tmp += ".part";
+        {
+            fs::ofstream ofs(tmp, std::ios::binary | std::ios::trunc);
+            ofs.write(data.data(), std::streamsize(data.size()));
+            if (!ofs) return;
+        }
+        boost::system::error_code ec;
+        fs::rename(tmp, local, ec);
     }
 
     void prune_cache()
@@ -736,7 +943,9 @@ private:
             fs::path    local;
             uint64_t    expected = 0;
             // timelapse thumbnails are separate files on the printer
-            if (sub.empty() || sub == "thumbnail" || !is_cached(path.substr(0, n), local, expected)) return false;
+            if (sub.empty() || sub == "thumbnail") return false;
+            boost::system::error_code ec;
+            if (!is_cached(path.substr(0, n), local, expected) && !fs::exists(entry_cache_path(path.substr(0, n), sub), ec)) return false;
         }
         return true;
     }
@@ -786,6 +995,75 @@ private:
         }
         close_zip_reader(&zip);
         return true;
+    }
+
+    // Reads entries of a model file for a preview, missing entries are skipped: from
+    // the local copy of the file if there is one, else from the cache of entries,
+    // else only those parts of the file on the printer. Returns 0 or an error.
+    int read_model_entries(std::string const &path, std::vector<std::string> const &names, std::vector<std::pair<std::string, std::string>> &out)
+    {
+        fs::path local;
+        uint64_t size = 0;
+        if (is_cached(path, local, size))
+            return read_entries(local, names, out) ? 0 : FILE_NO_EXIST;
+        std::vector<std::string> missing;
+        for (auto &name : names) {
+            std::string data;
+            if (!read_cached_entry(path, name, data))
+                missing.push_back(name);
+            else if (!data.empty())
+                out.emplace_back(name, std::move(data));
+        }
+        if (missing.empty()) return 0;
+        int res = remote_size(path, size);
+        if (res != 0) return res;
+        if (size > SMALL_MODEL_SIZE) {
+            res = read_remote_entries(path, size, missing, out);
+            if (res == 0 || res == ERROR_PIPE || res == ERROR_CANCEL) return res;
+            BOOST_LOG_TRIVIAL(info) << "LanFtps: reading parts of " << path << " failed (" << res << "), downloading it";
+        }
+        res = ensure_cached(path, local);
+        if (res != 0) return res;
+        return read_entries(local, missing, out) ? 0 : FILE_NO_EXIST;
+    }
+
+    int read_remote_entries(std::string const &path, uint64_t size, std::vector<std::string> const &names,
+                            std::vector<std::pair<std::string, std::string>> &out)
+    {
+        RemoteZip zip(size, [this, &path](uint64_t offset, uint64_t n, std::string &data) { return download_range(path, offset, n, data); });
+        int       res = zip.open();
+        if (res != 0) return res;
+        // the preview image is asked for after the metadata: fetch the images of the
+        // sliced plates along, as PrinterFileSystem::ParseThumbnail picks them
+        std::vector<std::string> wanted = names;
+        std::vector<std::string> all    = zip.entry_names();
+        for (auto &name : all) {
+            constexpr char const *prefix = "Metadata/plate_";
+            if (name.rfind(prefix, 0) != 0 || !ends_with_ci(name, ".gcode")) continue;
+            std::string image = name.substr(0, name.size() - strlen(".gcode")) + ".png";
+            if (std::find(all.begin(), all.end(), image) != all.end() && std::find(wanted.begin(), wanted.end(), image) == wanted.end())
+                wanted.push_back(image);
+        }
+        std::vector<std::pair<std::string, std::string>> entries;
+        res = zip.read(wanted, entries);
+        if (res != 0) return res;
+        BOOST_LOG_TRIVIAL(info) << "LanFtps: read " << entries.size() << " entries of " << path << " in " << zip.transfers() << " transfers";
+        for (auto &name : wanted) {
+            auto it = std::find_if(entries.begin(), entries.end(), [&name](auto &e) { return e.first == name; });
+            write_cached_entry(path, name, it == entries.end() ? std::string() : it->second);
+            if (it != entries.end() && std::find(names.begin(), names.end(), name) != names.end())
+                out.push_back(std::move(*it));
+        }
+        prune_cache();
+        // the slicing time comes along, see job_time()
+        auto known = m_known.find(path);
+        if (known != m_known.end() && m_job_times.find(job_time_key(known->second)) == m_job_times.end()) {
+            if (time_t t = zip.entry_time()) {
+                m_job_times[job_time_key(known->second)] = int64_t(t);
+                m_job_times_changed                      = true;
+            }
+        }
+        return 0;
     }
 
     static std::string make_zip(std::vector<std::pair<std::string, std::string>> const &entries)
@@ -1033,11 +1311,10 @@ private:
                 int   result = i + 1 == order.size() ? SUCCESS : CONTINUE;
                 json  reply;
                 reply["path"] = file;
-                fs::path local;
-                int      res = ensure_cached(file, local);
-                if (res == ERROR_CANCEL) return;
                 std::vector<std::pair<std::string, std::string>> entries;
-                if (res != 0 || !read_entries(local, groups[file], entries) || entries.empty()) {
+                int res = read_model_entries(file, groups[file], entries);
+                if (res == ERROR_CANCEL) return;
+                if (res != 0 || entries.empty()) {
                     reply["size"] = 0;
                     push(seq, res ? res : FILE_NO_EXIST, reply);
                     continue;
@@ -1067,10 +1344,9 @@ private:
                 res      = download_to_string(thumb, data);
                 mimetype = "image/jpeg";
             } else {
-                fs::path local;
-                res = ensure_cached(file, local);
                 std::vector<std::pair<std::string, std::string>> entries;
-                if (res == 0 && read_entries(local, {sub}, entries) && !entries.empty())
+                res = read_model_entries(file, {sub}, entries);
+                if (res == 0 && !entries.empty())
                     data = std::move(entries.front().second);
                 else if (res == 0)
                     res = FILE_NO_EXIST;
