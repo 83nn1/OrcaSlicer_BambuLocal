@@ -87,7 +87,7 @@ Geänderte Dateien: `LanFtpsTunnel.cpp/.hpp` (Anfrage `get_project_file`), `Prin
 - „Drucken“ aus dem Modell-Tab (Orcas Druck-von-SD-Dialog): Das Netzwerk-Plugin schickt den Auftrag auch im LAN-Modus per MQTT (`project_file`). Der Pfad muss `file:///sdcard/<pfad>` lauten, die FTPS-Pfade beginnen aber an der Wurzel der Karte. Ohne Präfix meldet der P1S einen Lese-/Schreibfehler der MicroSD-Karte. Am echten P1S getestet: Mit Präfix startet der Druck.
 - Hochladen auf die SD-Karte aus dem Speicher-Tab: gegen den nachgebauten FTPS-Server getestet (5 MB, 60 MB, leere Datei byteidentisch; Abbrechen, falsche MD5, ins Stocken geratener Upload hinterlassen keine Datei; ungültiger Name). Am echten P1S getestet: Hochladen funktioniert. Während und kurz nach dem Hochladen schickt der Drucker etwa 40 Sekunden keine MQTT-Meldungen, danach geht es von selbst weiter (siehe [Verbindung nach FTPS-Last](#verbindung-nach-ftps-last)).
 - Objekte überspringen: gegen den nachgebauten FTPS-Server getestet (Suche der Druckdatei, Vorschaubild > 256 KB in Blöcken, MD5, Platten-Fallback, fehlende Datei). Am echten P1S getestet: Überspringen funktioniert, der Drucker bestätigt `skip_objects` und meldet die übersprungenen Objekte etwa 2 Sekunden später in `s_obj` zurück. Der Zähler am Knopf stimmt damit.
-- Offen: Für Vorschaubilder, Druckzeit und Gewicht nur die nötigen Teile der `.3mf` laden statt der ganzen Datei, damit der Drucker weniger FTPS-Last hat und die MQTT-Pausen kürzer werden.
+- Vorschaubilder, Druckzeit und Gewicht aus nur den nötigen Teilen der `.3mf` lesen statt die ganze Datei zu laden: am P1S nicht möglich, sein FTPS-Server unterstützt kein `REST` (Fortsetzen ab einer Position). Der Speicher-Tab lädt die Datei deshalb weiter komplett.
 
 ## Bauen
 
