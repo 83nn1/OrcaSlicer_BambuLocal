@@ -1,4 +1,5 @@
 #pragma once
+#include <chrono>
 #include <map>
 #include <mutex>
 #include "libslic3r/CommonDefs.hpp"
@@ -29,6 +30,7 @@ class DeviceManager
 private:
     NetworkAgent* m_agent{ nullptr };
     AppConfig* m_app_config{ nullptr };
+    std::chrono::system_clock::time_point m_last_lan_reconnect;
     DeviceManagerRefresher* m_refresher{ nullptr };
 
     bool m_enable_mutil_machine = false;
@@ -128,6 +130,8 @@ private:
 
     void keep_alive();
     void check_pushing();
+    void check_lan_ftps_reports();
+    void reconnect_lan_machine(MachineObject* obj);
     std::string get_current_cloud_provider() const;
 
     void OnMachineBindStateChanged(MachineObject* obj, const std::string& new_state);
