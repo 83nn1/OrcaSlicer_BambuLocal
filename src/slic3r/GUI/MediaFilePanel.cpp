@@ -780,6 +780,9 @@ void MediaFilePanel::doAction(size_t index, int action)
                     if (!file_path.empty() && file_path[0] == '/') {
                         file_path.erase(0, 1);
                     }
+                    // FTPS paths start at the card root, the printer opens file:///sdcard/<path>
+                    if (use_lan_ftps())
+                        file_path = "sdcard/" + file_path;
 
                     int gcode_file_count = Slic3r::GUI::wxGetApp().plater()->update_print_required_data(config, model, plate_data_list, file.name, file_path);
 

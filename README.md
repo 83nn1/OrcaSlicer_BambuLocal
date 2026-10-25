@@ -84,7 +84,7 @@ Geänderte Dateien: `LanFtpsTunnel.cpp/.hpp` (Anfrage `get_project_file`), `Prin
 
 - Gegen einen nachgebauten Drucker-FTPS-Server getestet: Dateiliste, Umlaute und Leerzeichen in Dateinamen, Vorschaubilder, Downloads mit MD5-Prüfung, Abbrechen, Löschen, falscher Access Code.
 - Am echten P1S getestet: Dateiliste, Vorschaubilder, Druckzeit und Gewicht funktionieren.
-- Ob „Drucken“ aus dem Modell-Tab (Orcas Druck-von-SD-Dialog) im LAN-Modus durchläuft, ist offen.
+- „Drucken“ aus dem Modell-Tab (Orcas Druck-von-SD-Dialog): Das Netzwerk-Plugin schickt den Auftrag auch im LAN-Modus per MQTT (`project_file`). Der Pfad muss `file:///sdcard/<pfad>` lauten, die FTPS-Pfade beginnen aber an der Wurzel der Karte. Ohne Präfix meldet der P1S einen Lese-/Schreibfehler der MicroSD-Karte. Am echten P1S getestet: Mit Präfix startet der Druck.
 - Hochladen auf die SD-Karte aus dem Speicher-Tab: gegen den nachgebauten FTPS-Server getestet (5 MB, 60 MB, leere Datei byteidentisch; Abbrechen, falsche MD5, ins Stocken geratener Upload hinterlassen keine Datei; ungültiger Name). Am echten P1S getestet: Hochladen funktioniert. Während und kurz nach dem Hochladen schickt der Drucker etwa 40 Sekunden keine MQTT-Meldungen, danach geht es von selbst weiter (siehe [Verbindung nach FTPS-Last](#verbindung-nach-ftps-last)).
 - Objekte überspringen: gegen den nachgebauten FTPS-Server getestet (Suche der Druckdatei, Vorschaubild > 256 KB in Blöcken, MD5, Platten-Fallback, fehlende Datei). Am echten P1S getestet: Überspringen funktioniert, der Drucker bestätigt `skip_objects`.
 
