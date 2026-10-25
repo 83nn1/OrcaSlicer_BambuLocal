@@ -103,6 +103,17 @@ cd OrcaSlicer_BambuLocal
 build_win.bat
 ```
 
+## Download
+
+Letzter gültiger Build: **V0.1.1** vom 25.10.2026 (Stand `main` mit Speicher-Tab, Hochladen und Drucken von SD, Objekte überspringen).
+
+| Windows | Installer | Portable |
+|---|---|---|
+| x64 | [OrcaSlicer_Windows_x64](https://github.com/83nn1/OrcaSlicer_BambuLocal/actions/runs/40198331004/artifacts/12603345528) | [OrcaSlicer_Windows_x64_portable](https://github.com/83nn1/OrcaSlicer_BambuLocal/actions/runs/40198331004/artifacts/12603525250) |
+| ARM64 | [OrcaSlicer_Windows_arm64](https://github.com/83nn1/OrcaSlicer_BambuLocal/actions/runs/40198331004/artifacts/12603076329) | [OrcaSlicer_Windows_arm64_portable](https://github.com/83nn1/OrcaSlicer_BambuLocal/actions/runs/40198331004/artifacts/12602697569) |
+
+Alle Dateien dieses Builds: [Build all #23](https://github.com/83nn1/OrcaSlicer_BambuLocal/actions/runs/40198331004). Zum Herunterladen muss man bei GitHub angemeldet sein, die Dateien werden am 23.01.2027 gelöscht. Builds aus nicht übernommenen Pull Requests sind keine gültigen Versionen.
+
 ---
 
 Original-Projekt: [OrcaSlicer/OrcaSlicer](https://github.com/OrcaSlicer/OrcaSlicer)
