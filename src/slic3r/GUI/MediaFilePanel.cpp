@@ -346,10 +346,7 @@ void MediaFilePanel::UpdateByObj(MachineObject* obj)
         fs->CancelUploadTask();
         fs->Stop(true);
     }
-    if (m_upload_dlg) {
-        m_upload_dlg->Destroy();
-        m_upload_dlg = nullptr;
-    }
+    closeUploadDialog();
     m_button_refresh->Enable(false);
     m_button_management->Enable(false);
     SetSelecting(false);
@@ -374,6 +371,8 @@ void MediaFilePanel::UpdateByObj(MachineObject* obj)
             m_image_grid->ShowDownload(download_support);
             if (fs->GetCount() == 0)
                 SetSelecting(false);
+            if (m_upload_listing)
+                closeUploadDialog();
             updateUploadButton();
         });
         fs->Bind(EVT_SELECT_CHANGED, [this, wfs = boost::weak_ptr(fs)](auto &e) {
@@ -463,10 +462,15 @@ void MediaFilePanel::UpdateByObj(MachineObject* obj)
             boost::shared_ptr fs(wfs.lock());
             if (fs == nullptr || m_image_grid->GetFileSystem() != fs)
                 return;
-            if (m_upload_dlg) {
-                m_upload_dlg->Destroy();
-                m_upload_dlg = nullptr;
+            if (e.GetInt() == PrinterFileSystem::FF_UPLOADDONE && m_upload_dlg) {
+                // a P1 / A1 takes a while to list again after an upload, the dialog stays until
+                // the new file is shown (EVT_FILE_CHANGED)
+                m_upload_listing = true;
+                m_upload_dlg->Update(99, _L("Upload complete. Loading the file list..."));
+                fs->ListAllFiles();
+                return;
             }
+            closeUploadDialog();
             updateUploadButton();
             if (e.GetInt() == PrinterFileSystem::FF_UPLOADDONE) {
                 fs->ListAllFiles();
@@ -698,14 +702,25 @@ void MediaFilePanel::uploadFile()
             return;
         break;
     }
-    m_upload_dlg = new MediaProgressDialog(_L("Upload"), this, [wfs = boost::weak_ptr(fs)] {
-        if (auto fs = wfs.lock())
+    m_upload_dlg = new MediaProgressDialog(_L("Upload"), this, [this, wfs = boost::weak_ptr(fs)] {
+        if (m_upload_listing) // the file is on the printer, only stop waiting for the list
+            CallAfter([this] { closeUploadDialog(); updateUploadButton(); });
+        else if (auto fs = wfs.lock())
             fs->CancelUploadTask();
     }, wxPD_APP_MODAL | wxPD_CAN_ABORT);
     m_upload_dlg->Update(0, _L("Uploading to the printer..."));
     updateUploadButton();
     fs->SetUploadFile(path, name, "sdcard");
     fs->RequestUploadFile();
+}
+
+void MediaFilePanel::closeUploadDialog()
+{
+    m_upload_listing = false;
+    if (m_upload_dlg) {
+        m_upload_dlg->Destroy();
+        m_upload_dlg = nullptr;
+    }
 }
 
 void MediaFilePanel::doAction(size_t index, int action)

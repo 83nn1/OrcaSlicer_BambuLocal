@@ -114,8 +114,9 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           ver_pure=$(grep 'set(SoftFever_VERSION' version.inc | cut -d '"' -f2)
+          fork_ver=$(grep 'set(BambuLocal_VERSION' version.inc | cut -d '"' -f2)
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            ver="PR-${{ github.event.number }}"
+            ver="V${fork_ver}_PR-${{ github.event.number }}"
             git_commit_hash="${{ github.event.pull_request.head.sha }}"
           else
             ver=V$ver_pure
@@ -140,11 +141,15 @@ jobs:
           $eventName = "${{ github.event_name }}"
           $prNumber = "${{ github.event.number }}"
 
+          $versionContent = Get-Content version.inc -Raw
+          $forkVer = ""
+          if ($versionContent -match 'set\(BambuLocal_VERSION "(.*?)"\)') {
+              $forkVer = $matches[1]
+          }
           if ($eventName -eq 'pull_request') {
-              $ver = "PR" + $prNumber
+              $ver = "V" + $forkVer + "_PR" + $prNumber
               $git_commit_hash = "${{ github.event.pull_request.head.sha }}"
           } else {
-              $versionContent = Get-Content version.inc -Raw
               if ($versionContent -match 'set\(SoftFever_VERSION "(.*?)"\)') {
                   $ver = $matches[1]
               }

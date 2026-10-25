@@ -69,6 +69,7 @@ private:
     void updateUploadButton();
 
     void uploadFile();
+    void closeUploadDialog();
 
 private:
     ScalableBitmap m_bmp_loading;
@@ -96,6 +97,7 @@ private:
     ImageGrid * m_image_grid   = nullptr;
     ::Label *   m_preview_hint = nullptr; // previews wait while a LAN only printer prints
     ProgressDialog *m_upload_dlg = nullptr;
+    bool            m_upload_listing = false; // upload done, the dialog waits for the new list
 
     bool m_external = true;
 

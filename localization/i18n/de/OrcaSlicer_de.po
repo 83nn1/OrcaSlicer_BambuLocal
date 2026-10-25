@@ -7396,6 +7396,10 @@ msgstr "Die Datei '%s' ist bereits auf dem Drucker vorhanden. Möchten Sie sie e
 msgid "Uploading to the printer..."
 msgstr "Wird auf den Drucker hochgeladen..."
 
+# AI Translated
+msgid "Upload complete. Loading the file list..."
+msgstr "Hochladen abgeschlossen. Dateiliste wird geladen..."
+
 msgid "No printers."
 msgstr "Keine Drucker."
 

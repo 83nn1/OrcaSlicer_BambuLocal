@@ -85,12 +85,14 @@ Geänderte Dateien: `LanFtpsTunnel.cpp/.hpp` (Anfrage `get_project_file`), `Prin
 - Gegen einen nachgebauten Drucker-FTPS-Server getestet: Dateiliste, Umlaute und Leerzeichen in Dateinamen, Vorschaubilder, Downloads mit MD5-Prüfung, Abbrechen, Löschen, falscher Access Code.
 - Am echten P1S getestet: Dateiliste, Vorschaubilder, Druckzeit und Gewicht funktionieren.
 - Ob „Drucken“ aus dem Modell-Tab (Orcas Druck-von-SD-Dialog) im LAN-Modus durchläuft, ist offen.
-- Hochladen auf die SD-Karte aus dem Speicher-Tab: gegen den nachgebauten FTPS-Server getestet (5 MB, 60 MB, leere Datei byteidentisch; Abbrechen, falsche MD5, ins Stocken geratener Upload hinterlassen keine Datei; ungültiger Name). Am echten P1S: Hochladen funktioniert, danach verlor Orca die MQTT-Verbindung (siehe [Verbindung nach FTPS-Last](#verbindung-nach-ftps-last)).
+- Hochladen auf die SD-Karte aus dem Speicher-Tab: gegen den nachgebauten FTPS-Server getestet (5 MB, 60 MB, leere Datei byteidentisch; Abbrechen, falsche MD5, ins Stocken geratener Upload hinterlassen keine Datei; ungültiger Name). Am echten P1S getestet: Hochladen funktioniert. Während und kurz nach dem Hochladen schickt der Drucker etwa 40 Sekunden keine MQTT-Meldungen, danach geht es von selbst weiter (siehe [Verbindung nach FTPS-Last](#verbindung-nach-ftps-last)).
 - Objekte überspringen: gegen den nachgebauten FTPS-Server getestet (Suche der Druckdatei, Vorschaubild > 256 KB in Blöcken, MD5, Platten-Fallback, fehlende Datei). Am echten P1S getestet: Überspringen funktioniert, der Drucker bestätigt `skip_objects`.
 
 ## Bauen
 
 Windows-Installer: *Actions → Build all → Run workflow*, danach unter *Artifacts* herunterladen.
+
+Die Builds dieses Forks haben eine eigene Versionsnummer (`BambuLocal_VERSION` in `version.inc`, angezeigt unter *Hilfe → Über* und am Anfang des Logs). Die letzte Stelle steigt mit jedem Build, der zum Testen rausgeht, die mittlere mit jedem neuen Pull Request: 0.0.1, 0.0.2, … dann 0.1.1. Artefakte eines Pull Requests heißen z. B. `OrcaSlicer_Windows_V0.0.1_PR2_x64_portable`.
 
 Lokal unter Windows (Visual Studio 2022, CMake, Git):
 
