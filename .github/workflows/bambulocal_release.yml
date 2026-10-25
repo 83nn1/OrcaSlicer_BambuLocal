@@ -1,0 +1,91 @@
+name: BambuLocal release
+
+# Publishes the Windows builds of a finished "Build all" run on main as a
+# GitHub release of this fork, so they can be downloaded without a GitHub
+# login and don't expire like workflow artifacts.
+#
+# Trigger: Actions -> "BambuLocal release" -> Run workflow, with the run ID of
+# the "Build all" run (the number in its URL) and the fork version
+# (BambuLocal_VERSION in version.inc). The assets get fixed names so the
+# README can link releases/latest/download/<name>.
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'Run ID of the "Build all" run on main'
+        required: true
+        type: string
+      version:
+        description: 'Fork version, e.g. 0.1.1'
+        required: true
+        type: string
+
+permissions:
+  contents: write   # create the release and tag
+  actions: read     # download artifacts from another run
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      RUN_ID: ${{ inputs.run_id }}
+      VERSION: ${{ inputs.version }}
+    steps:
+      - name: Check inputs and source run
+        run: |
+          set -euo pipefail
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Version must look like 0.1.1."
+            exit 1
+          fi
+          info=$(gh run view "$RUN_ID" --repo "$GITHUB_REPOSITORY" --json workflowName,conclusion,headBranch,headSha,event)
+          echo "$info"
+          if [ "$(jq -r .workflowName <<<"$info")" != "Build all" ] ||
+             [ "$(jq -r .conclusion <<<"$info")" != "success" ] ||
+             [ "$(jq -r .headBranch <<<"$info")" != "main" ] ||
+             [ "$(jq -r .event <<<"$info")" = "pull_request" ]; then
+            echo "::error::Run $RUN_ID is not a successful Build all run on main."
+            exit 1
+          fi
+          # The version must match the source, so the release names what the build shows under Help -> About.
+          sha=$(jq -r .headSha <<<"$info")
+          src_version=$(gh api "repos/$GITHUB_REPOSITORY/contents/version.inc?ref=$sha" --jq .content | base64 -d |
+                        sed -n 's/.*set(BambuLocal_VERSION "\(.*\)").*/\1/p')
+          if [ "$src_version" != "$VERSION" ]; then
+            echo "::error::version.inc of run $RUN_ID says $src_version, not $VERSION."
+            exit 1
+          fi
+          if gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "::error::Release v$VERSION already exists."
+            exit 1
+          fi
+          echo "SHA=$sha" >> "$GITHUB_ENV"
+
+      - name: Download Windows artifacts
+        run: |
+          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --dir artifacts -p 'OrcaSlicer_Windows_V*'
+          ls -1 artifacts
+
+      - name: Assemble assets
+        run: |
+          set -euo pipefail
+          mkdir upload
+          for arch in x64 arm64; do
+            installer=$(find artifacts -type f -name '*.exe' -path "*OrcaSlicer_Windows_V*_${arch}/*" | head -n1)
+            portable=$(find artifacts -maxdepth 1 -type d -name "OrcaSlicer_Windows_V*_${arch}_portable" | head -n1)
+            if [ -z "$installer" ] || [ -z "$portable" ]; then
+              echo "::error::Windows $arch artifacts missing (expired?)."
+              exit 1
+            fi
+            cp -v "$installer" "upload/OrcaSlicer_BambuLocal_Windows_${arch}_Installer.exe"
+            ( cd "$portable" && zip -qr "$GITHUB_WORKSPACE/upload/OrcaSlicer_BambuLocal_Windows_${arch}_portable.zip" . )
+          done
+          ls -lh upload
+
+      - name: Create release
+        run: |
+          gh release create "v$VERSION" upload/* --repo "$GITHUB_REPOSITORY" --target "$SHA" --latest \
+            --title "V$VERSION" \
+            --notes "Windows-Build V$VERSION aus [Build all #$RUN_ID]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$RUN_ID), Stand \`${SHA:0:8}\`. Änderungen gegenüber Orca: siehe README."
