@@ -2,7 +2,7 @@
 
 Fork von [OrcaSlicer](https://github.com/OrcaSlicer/OrcaSlicer) für Bambu-Lab-Drucker im LAN-Only-Modus (P1/A1):
 
-- **Zugriff auf den Speicher (SD-Karte)** unter *Gerät → Speicher*
+- **Zugriff auf den Speicher (SD-Karte)** unter *Gerät → Speicher*, inkl. Hochladen (siehe [unten](#hochladen))
 - **Objekte überspringen** während des Drucks (siehe [unten](#objekte-überspringen))
 
 ## Problem
@@ -24,6 +24,7 @@ Der Speicher-Tab holt die Dateien normalerweise über einen Tunnel des Bambu-Net
 | Zeitraffer-Vorschaubilder | `/timelapse/thumbnail/<name>.jpg` |
 | Herunterladen | `RETR`, in Blöcken mit MD5-Prüfung, abbrechbar |
 | Löschen | `DELE` (bei Zeitraffern samt Vorschaubild) |
+| Hochladen | `STOR /<name>`, gestreamt, mit Größen- und MD5-Prüfung, abbrechbar |
 | Datum der Druckaufträge | Zeitstempel im Kopf der `.3mf` (siehe unten) |
 
 ### Datum der Druckaufträge
@@ -39,6 +40,18 @@ Einschränkung: Das ist der Zeitpunkt des Slicens. Wird eine Datei später direk
 Für Vorschaubilder, Druckzeit und Gewicht lädt der Speicher-Tab jede `.3mf` komplett herunter. Das belastet einen P1S während des Drucks so stark, dass er minutenlang keine MQTT-Meldungen mehr schickt und Orca ihn als getrennt anzeigt (beobachtet beim Druckstart).
 
 Solange der Drucker druckt (auch Vorbereiten und Pause), lädt der Tunnel deshalb keine Vorschaubilder vom Drucker und liest keine Druckdaten nach. Bereits zwischengespeicherte Vorschauen werden weiter angezeigt, die übrigen kommen nach dem Druck von selbst. Über der Dateiliste steht dann ein Hinweis. Dateiliste, Herunterladen und Löschen funktionieren weiter.
+
+### Hochladen
+
+In der Ansicht *Modell* gibt es den Knopf „Hochladen“ (nur über FTPS, also bei P1/A1 im LAN-Only-Modus). Er lädt eine `.gcode.3mf` vom PC ins Hauptverzeichnis der SD-Karte, dorthin, wo auch Bambu Studio gesendete Dateien ablegt. Gibt es dort schon eine Datei mit dem Namen, fragt Orca vor dem Ersetzen nach.
+
+`PrinterFileSystem` schickt die Datei in Blöcken von 256 KB, ohne auf Antworten zu warten. Der Tunnel puffert höchstens 4 MB davon und reicht sie an ein einziges `STOR` weiter. Danach vergleicht er die Größe in der Dateiliste des Druckers und die MD5-Summe. Schlägt das fehl, wird abgebrochen oder kommen 30 Sekunden lang keine Daten, löscht er die unvollständige Datei wieder, damit sie nicht als druckbarer Auftrag in der Liste steht.
+
+Eine Kopie der hochgeladenen Datei landet gleich im Zwischenspeicher der Vorschauen. Die neu geladene Liste muss die Datei deshalb nicht wieder vom Drucker holen, um Vorschaubild und Datum anzuzeigen.
+
+### Verbindung nach FTPS-Last
+
+Auch ohne Druck schickt ein P1S unter FTPS-Last (Vorschauen laden, Hochladen) mitunter über 30 Sekunden keine MQTT-Meldungen. Beobachtet wurde, dass er danach stumm bleibt, bis die Verbindung neu aufgebaut wird, während er sich per SSDP weiter meldet. Orca verbindet sich bei einem über FTPS angebundenen Drucker deshalb selbst neu (wie bei erneuter Auswahl des Druckers), wenn 30 Sekunden keine Meldung kam, der Drucker per SSDP aber erreichbar ist. Höchstens einmal pro Minute, und nur wenn die Verbindung vorher Meldungen geliefert hat.
 
 ## Sortierung
 
@@ -72,12 +85,14 @@ Geänderte Dateien: `LanFtpsTunnel.cpp/.hpp` (Anfrage `get_project_file`), `Prin
 - Gegen einen nachgebauten Drucker-FTPS-Server getestet: Dateiliste, Umlaute und Leerzeichen in Dateinamen, Vorschaubilder, Downloads mit MD5-Prüfung, Abbrechen, Löschen, falscher Access Code.
 - Am echten P1S getestet: Dateiliste, Vorschaubilder, Druckzeit und Gewicht funktionieren.
 - Ob „Drucken“ aus dem Modell-Tab (Orcas Druck-von-SD-Dialog) im LAN-Modus durchläuft, ist offen.
-- Hochladen auf die SD-Karte aus dem Speicher-Tab ist nicht umgesetzt.
+- Hochladen auf die SD-Karte aus dem Speicher-Tab: gegen den nachgebauten FTPS-Server getestet (5 MB, 60 MB, leere Datei byteidentisch; Abbrechen, falsche MD5, ins Stocken geratener Upload hinterlassen keine Datei; ungültiger Name). Am echten P1S getestet: Hochladen funktioniert. Während und kurz nach dem Hochladen schickt der Drucker etwa 40 Sekunden keine MQTT-Meldungen, danach geht es von selbst weiter (siehe [Verbindung nach FTPS-Last](#verbindung-nach-ftps-last)).
 - Objekte überspringen: gegen den nachgebauten FTPS-Server getestet (Suche der Druckdatei, Vorschaubild > 256 KB in Blöcken, MD5, Platten-Fallback, fehlende Datei). Am echten P1S getestet: Überspringen funktioniert, der Drucker bestätigt `skip_objects`.
 
 ## Bauen
 
 Windows-Installer: *Actions → Build all → Run workflow*, danach unter *Artifacts* herunterladen.
+
+Die Builds dieses Forks haben eine eigene Versionsnummer (`BambuLocal_VERSION` in `version.inc`, angezeigt unter *Hilfe → Über* und am Anfang des Logs). Die letzte Stelle steigt mit jedem Build, der zum Testen rausgeht, die mittlere mit jedem neuen Pull Request: 0.0.1, 0.0.2, … dann 0.1.1. Artefakte eines Pull Requests heißen z. B. `OrcaSlicer_Windows_V0.0.1_PR2_x64_portable`.
 
 Lokal unter Windows (Visual Studio 2022, CMake, Git):
 

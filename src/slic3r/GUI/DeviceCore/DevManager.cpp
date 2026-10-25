@@ -264,6 +264,32 @@ namespace Slic3r
         }
     }
 
+    void DeviceManager::reconnect_lan_machine(MachineObject* obj)
+    {
+        if (!m_agent) return;
+        m_agent->disconnect_printer();
+        obj->reset();
+        obj->connect();
+        obj->set_lan_mode_connection_state(true);
+    }
+
+    // A P1 / A1 in LAN only mode can stop sending its MQTT reports after heavy FTPS traffic
+    // (storage browser previews, uploads) while it still announces itself over SSDP. It only
+    // reports again on a new connection, which selecting the printer again also makes.
+    void DeviceManager::check_lan_ftps_reports()
+    {
+        MachineObject* obj = get_selected_machine();
+        // m_push_count: reports came on this connection, so it is not a connection that never worked
+        if (!obj || !obj->is_lan_ftps_storage() || obj->m_push_count == 0) return;
+        const auto now    = std::chrono::system_clock::now();
+        const auto silent = std::chrono::duration_cast<std::chrono::milliseconds>(now - obj->last_update_time);
+        const bool alive  = Slic3r::Utils::get_current_time_utc() - obj->last_alive < 15;
+        if (silent.count() <= DISCONNECT_TIMEOUT || !alive || now - m_last_lan_reconnect < std::chrono::minutes(1)) return;
+        BOOST_LOG_TRIVIAL(info) << "check_lan_ftps_reports: no report for " << silent.count() << " ms, reconnecting dev_id=" << obj->get_dev_id();
+        m_last_lan_reconnect = now;
+        reconnect_lan_machine(obj);
+    }
+
     void DeviceManager::on_machine_alive(std::string json_str)
     {
         try {
@@ -695,14 +721,7 @@ namespace Slic3r
                         << ", disconnect and reconnect";
 
                     // lan mode printer reconnect printer
-                    if (m_agent)
-                    {
-                        m_agent->disconnect_printer();
-                        it->second->reset();
-
-                        it->second->connect();
-                        it->second->set_lan_mode_connection_state(true);
-                    }
+                    reconnect_lan_machine(it->second);
                 }
             }
             else
@@ -1165,6 +1184,8 @@ namespace Slic3r
             agent->set_user_selected_machine("");
             return;
         }
+
+        m_manager->check_lan_ftps_reports();
 
         // do some refresh
         const auto cloud_provider = Slic3r::GUI::wxGetApp().get_printer_cloud_provider();

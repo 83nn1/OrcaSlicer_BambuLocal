@@ -34,6 +34,7 @@ class MachineObject;
 namespace GUI {
 
 class ImageGrid;
+class ProgressDialog;
 
 class MediaFilePanel : public wxPanel
 {
@@ -64,6 +65,12 @@ private:
 
     void applySortMode(int mode);
 
+    // Upload to the storage, only over FTPS (LAN only P1 / A1) and in the model view
+    void updateUploadButton();
+
+    void uploadFile();
+    void closeUploadDialog();
+
 private:
     ScalableBitmap m_bmp_loading;
     ScalableBitmap m_bmp_failed;
@@ -84,10 +91,13 @@ private:
     ::Button *m_button_download = nullptr;
     ::Button *m_button_refresh = nullptr;
     ::Button *m_button_management = nullptr;
+    ::Button *m_button_upload = nullptr;
     ::ComboBox *m_sort_box = nullptr;
 
     ImageGrid * m_image_grid   = nullptr;
     ::Label *   m_preview_hint = nullptr; // previews wait while a LAN only printer prints
+    ProgressDialog *m_upload_dlg = nullptr;
+    bool            m_upload_listing = false; // upload done, the dialog waits for the new list
 
     bool m_external = true;
 

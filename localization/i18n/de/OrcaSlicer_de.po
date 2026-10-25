@@ -7380,6 +7380,26 @@ msgstr "Batch-Verwaltung von Dateien."
 msgid "Reload file list from printer."
 msgstr "Dateiliste vom Drucker neu laden."
 
+# AI Translated
+msgid "Upload a sliced file from this computer to the printer's storage."
+msgstr "Eine geslicte Datei von diesem Computer auf den Speicher des Druckers hochladen."
+
+# AI Translated
+msgid "Choose a sliced file to upload to the printer"
+msgstr "Geslicte Datei zum Hochladen auf den Drucker auswählen"
+
+# AI Translated
+msgid "The file '%s' already exists on the printer. Do you want to replace it?"
+msgstr "Die Datei '%s' ist bereits auf dem Drucker vorhanden. Möchten Sie sie ersetzen?"
+
+# AI Translated
+msgid "Uploading to the printer..."
+msgstr "Wird auf den Drucker hochgeladen..."
+
+# AI Translated
+msgid "Upload complete. Loading the file list..."
+msgstr "Hochladen abgeschlossen. Dateiliste wird geladen..."
+
 msgid "No printers."
 msgstr "Keine Drucker."
 
