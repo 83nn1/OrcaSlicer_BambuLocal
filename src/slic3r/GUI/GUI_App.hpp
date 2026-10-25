@@ -902,11 +902,13 @@ private:
 
     // select or add MachineObject
     void            select_machine(const std::string& agent_id);
+    void            auto_connect_last_lan_machine(const std::string& ssdp_json);
 
     bool                    m_init_app_config_from_older { false };
     bool                    m_datadir_redefined { false };
     std::string             m_older_data_dir_path;
     bool                    m_unsigned_plugin_warning_shown { false };
+    bool                    m_lan_auto_connect_done { false };
     boost::optional<Semver> m_last_config_version;
     bool                    m_config_corrupted { false };
     std::string             m_open_method;
