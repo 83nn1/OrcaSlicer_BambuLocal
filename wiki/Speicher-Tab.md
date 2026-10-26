@@ -30,7 +30,9 @@ Da die Anfragen identisch sind, bleibt die übrige Oberfläche (`MediaFilePanel`
 
 Im LAN-Only-Modus hat der Drucker keine verlässliche Uhr: Nach jedem Aus- und Einschalten läuft sie von einem alten Datum weiter. Die Dateizeiten auf der SD-Karte sind dadurch unbrauchbar, bei einem P1S z. B. fast alle zwischen 13. und 19. März.
 
-Jede `.3mf`, die OrcaSlicer oder Bambu Studio exportiert, enthält aber im ZIP-Kopf die Uhrzeit des PCs beim Slicen. Dieser Kopf steht in den ersten 30 Bytes der Datei. Der Tunnel liest deshalb von jeder Datei nur die ersten 64 Bytes, im Hintergrund, wenn sonst nichts zu tun ist. Danach lädt die Liste einmal neu, mit den richtigen Zeiten. Die Zeiten werden in `%TEMP%\orca_lan_storage\job_times.json` gespeichert, ab dem zweiten Öffnen stimmen sie sofort. Dateien ohne diesen Zeitstempel behalten die Zeit des Druckers.
+Jede `.3mf`, die OrcaSlicer oder Bambu Studio exportiert, enthält aber im ZIP-Kopf die Uhrzeit des PCs beim Slicen. Dieser Kopf steht in den ersten 30 Bytes der Datei. Der Tunnel liest deshalb von jeder Datei nur die ersten 64 Bytes, im Hintergrund, die nach Druckerzeit neuesten zuerst. Danach lädt die Liste einmal neu, mit den richtigen Zeiten. Schlägt ein Lesen fehl, versucht er es später erneut (nach 30 s, 60 s, …, nach fünf Fehlschlägen in Folge nicht mehr). Die Zeiten werden in `%TEMP%\orca_lan_storage\job_times.json` gespeichert, ab dem zweiten Öffnen stimmen sie sofort. Dateien ohne diesen Zeitstempel behalten die Zeit des Druckers.
+
+Druckaufträge, die aus diesem Orca per LAN gesendet werden, muss der Tunnel gar nicht erst vom Drucker lesen: Nach erfolgreichem Senden legt Orca eine Kopie der `.3mf` im Zwischenspeicher ab (`sent_<IP>_<Größe>.3mf`). Taucht die Datei mit gleicher Größe in der Dateiliste auf, wird diese Kopie übernommen. Der neue Auftrag steht so sofort oben und hat gleich ein Vorschaubild, auch in den ersten 1–2 Minuten nach dem Druckstart, in denen der P1S per FTPS nicht antwortet.
 
 Einschränkung: Das ist der Zeitpunkt des Slicens. Wird eine Datei später direkt am Drucker erneut gedruckt, ändert sich das Datum nicht.
 
@@ -38,7 +40,9 @@ Einschränkung: Das ist der Zeitpunkt des Slicens. Wird eine Datei später direk
 
 Für Vorschaubilder, Druckzeit und Gewicht lädt der Speicher-Tab jede `.3mf` komplett herunter. Das belastet einen P1S während des Drucks so stark, dass er minutenlang keine MQTT-Meldungen mehr schickt und Orca ihn als getrennt anzeigt (beobachtet beim Druckstart).
 
-Solange der Drucker druckt (auch Vorbereiten und Pause), lädt der Tunnel deshalb keine Vorschaubilder vom Drucker und liest keine Druckdaten nach. Bereits zwischengespeicherte Vorschauen werden weiter angezeigt, die übrigen kommen nach dem Druck von selbst. Über der Dateiliste steht dann ein Hinweis. Dateiliste, Herunterladen und Löschen funktionieren weiter.
+Solange der Drucker druckt (auch Vorbereiten und Pause), lädt der Tunnel deshalb keine Vorschaubilder vom Drucker. Bereits zwischengespeicherte Vorschauen werden weiter angezeigt, die übrigen kommen nach dem Druck von selbst. Über der Dateiliste steht dann ein Hinweis. Dateiliste, Herunterladen und Löschen funktionieren weiter. Die 64 Bytes für das Datum liest er auch während des Drucks, aber höchstens eine Datei alle 10 Sekunden.
+
+Beim Druckstart schickt der P1S oft bis zu einer Minute lang gar keine Meldungen und beantwortet in dieser Zeit auch kein FTPS. Kam 20 Sekunden lang keine Meldung, baut der Speicher-Tab deshalb keine FTPS-Verbindung auf, sondern zeigt den Hinweis „Der Drucker antwortet gerade nicht …“ und lädt den Speicher, sobald der Drucker sich wieder meldet. Auch im Hintergrund wird dann nichts gelesen.
 
 Vorschaubilder, Druckzeit und Gewicht nur aus den nötigen Teilen der `.3mf` zu lesen, statt die ganze Datei zu laden, ist am P1S nicht möglich: Sein FTPS-Server unterstützt kein `REST` (Fortsetzen ab einer Position). Der Speicher-Tab lädt die Datei deshalb weiter komplett.
 
@@ -54,7 +58,9 @@ Eine Kopie der hochgeladenen Datei landet gleich im Zwischenspeicher der Vorscha
 
 „Drucken“ in der Ansicht *Modell* öffnet Orcas Druck-von-SD-Dialog. Das Netzwerk-Plugin schickt den Auftrag auch im LAN-Modus per MQTT (`project_file`). Der Pfad muss `file:///sdcard/<pfad>` lauten, die FTPS-Pfade beginnen aber an der Wurzel der Karte. Ohne dieses Präfix meldet der P1S einen Lese-/Schreibfehler der MicroSD-Karte, deshalb setzt der Fork es davor.
 
-## Verbindung nach FTPS-Last
+## Verbindung halten
+
+Ein P1S schickt über MQTT nur Änderungen. Ein untätiger Drucker meldet sich deshalb mitunter über 30 Sekunden lang nicht, und Orca zeigt ihn nach 30 Sekunden als getrennt an. Kam von einem über FTPS angebundenen Drucker 15 Sekunden lang keine Meldung, fragt Orca deshalb seine Version ab (`get_version`, höchstens alle 15 Sekunden). Der Drucker antwortet darauf innerhalb einer Sekunde. `pushall` wäre die Alternative, ist auf einem P1 aber deutlich schwerer.
 
 Auch ohne Druck schickt ein P1S unter FTPS-Last (Vorschauen laden, Hochladen) mitunter über 30 Sekunden keine MQTT-Meldungen. Beobachtet wurde, dass er danach stumm bleibt, bis die Verbindung neu aufgebaut wird, während er sich per SSDP weiter meldet. Orca verbindet sich bei einem über FTPS angebundenen Drucker deshalb selbst neu (wie bei erneuter Auswahl des Druckers), wenn 30 Sekunden keine Meldung kam, der Drucker per SSDP aber erreichbar ist. Höchstens einmal pro Minute, und nur wenn die Verbindung vorher Meldungen geliefert hat.
 
@@ -66,9 +72,11 @@ Neben „Aktualisieren“ gibt es eine Auswahl für die Reihenfolge: neueste zue
 
 - `src/slic3r/GUI/Printer/LanFtpsTunnel.cpp/.hpp` (neu)
 - `src/slic3r/GUI/Printer/PrinterFileSystem.cpp/.h`: wählt bei `lanftps://`-URLs den FTPS-Tunnel, Sortierung, Neuladen nach dem Lernen der Zeiten
-- `src/slic3r/GUI/MediaFilePanel.cpp/.h`: LAN-Only-Zweig in `fetchUrl()`, Download-Knopf für Modelle, Sortierauswahl, `sdcard/`-Präfix beim Drucken
+- `src/slic3r/GUI/MediaFilePanel.cpp/.h`: LAN-Only-Zweig in `fetchUrl()`, Download-Knopf für Modelle, Sortierauswahl, `sdcard/`-Präfix beim Drucken, Warten auf einen stummen Drucker
+- `src/slic3r/GUI/Jobs/PrintJob.cpp`: merkt sich nach dem Senden per LAN die gesendete `.3mf`
+- `src/slic3r/GUI/DeviceCore/DevManager.cpp/.h`: `get_version` nach 15 Sekunden ohne Meldung
 - `src/slic3r/GUI/ImageGrid.cpp/.h`: Datumsbereich nur bei Sortierung nach Zeit, nach oben scrollen bei neuer Sortierung
-- `localization/i18n/de/OrcaSlicer_de.po`: deutsche Texte für die Sortierauswahl
+- `localization/i18n/de/OrcaSlicer_de.po`: deutsche Texte für Sortierauswahl und Hinweise
 - `src/slic3r/CMakeLists.txt`
 
 Siehe auch: [Objekte überspringen](Objekte-überspringen), [Teststand](Teststand).
