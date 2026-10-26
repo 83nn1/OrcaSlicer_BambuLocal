@@ -36,6 +36,7 @@
 #include "slic3r/GUI/DeviceManager.hpp"
 #include "slic3r/GUI/I18N.hpp"
 #include "slic3r/GUI/Jobs/SendJob.hpp"
+#include "slic3r/GUI/Printer/LanFtpsTunnel.hpp"
 #include <boost/filesystem.hpp>
 
 namespace fs = boost::filesystem;
@@ -717,6 +718,9 @@ void PrintJob::process(Ctl &ctl)
         // wait for printer mqtt ready the same job id
 
         BOOST_LOG_TRIVIAL(error) << "print_job: send ok.";
+        // Orca BambuLocal: the storage tab of a LAN only P1 / A1 shows the sent job right away
+        if (m_print_type == "from_normal" && this->connection_type == "lan" && obj && obj->is_lan_ftps_storage())
+            Slic3r::LanFtps::remember_sent_file(m_dev_ip, job_data._3mf_path);
         wxCommandEvent* evt = new wxCommandEvent(m_print_job_completed_id);
         if (!m_completed_evt_data.empty())
             evt->SetString(m_completed_evt_data);

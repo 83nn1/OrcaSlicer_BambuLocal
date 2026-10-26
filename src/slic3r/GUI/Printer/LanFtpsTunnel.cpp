@@ -278,6 +278,20 @@ bool printer_silent(std::string const &host)
 // While printing, the start of a model file (job time) is read only now and then
 constexpr auto BUSY_JOB_TIME_INTERVAL = std::chrono::seconds(10);
 
+fs::path lan_cache_dir()
+{
+    boost::system::error_code ec;
+    fs::path dir = fs::temp_directory_path(ec) / "orca_lan_storage";
+    fs::create_directories(dir, ec);
+    return dir;
+}
+
+// A model file this PC sent to the printer, kept until it shows up in the storage list
+fs::path sent_copy_path(std::string const &host, uint64_t size)
+{
+    return lan_cache_dir() / ("sent_" + host + "_" + std::to_string(size) + ".3mf");
+}
+
 class Tunnel
 {
 public:
@@ -693,13 +707,7 @@ private:
 
     // ---------------------------------------------------------------- cache of model files
 
-    fs::path cache_dir() const
-    {
-        boost::system::error_code ec;
-        fs::path dir = fs::temp_directory_path(ec) / "orca_lan_storage";
-        fs::create_directories(dir, ec);
-        return dir;
-    }
+    fs::path cache_dir() const { return lan_cache_dir(); }
 
     fs::path cache_path(std::string const &path)
     {
@@ -889,6 +897,13 @@ private:
             // a model fetched for its thumbnail before has it locally
             boost::system::error_code ec;
             fs::path                  local = cache_path(e.path);
+            // a job this PC sent: the copy kept at sending is the same file (same size), no
+            // need to read it from the printer, which hardly answers FTPS while a print starts
+            fs::path sent = sent_copy_path(m_host, e.size);
+            if (!fs::exists(local, ec) && fs::exists(sent, ec) && fs::file_size(sent, ec) == e.size) {
+                fs::rename(sent, local, ec);
+                if (!ec) BOOST_LOG_TRIVIAL(info) << "LanFtps: " << e.path << " is the job sent from this PC";
+            }
             if (fs::exists(local, ec) && fs::file_size(local, ec) == e.size) {
                 unsigned char buf[ZIP_HEADER_SIZE] = {};
                 fs::ifstream  ifs(local, std::ios::binary);
@@ -1545,6 +1560,23 @@ bool is_url(char const *url) { return url && strncmp(url, SCHEME, strlen(SCHEME)
 std::string make_url(std::string const &ip, std::string const &user, std::string const &passwd)
 {
     return std::string(SCHEME) + ip + "?user=" + url_encode(user) + "&passwd=" + url_encode(passwd);
+}
+
+void remember_sent_file(std::string const &ip, boost::filesystem::path const &local_3mf)
+{
+    if (ip.empty()) return;
+    boost::system::error_code ec;
+    uint64_t                  size = fs::file_size(local_3mf, ec);
+    if (ec || size == 0) return;
+    fs::path dst = sent_copy_path(ip, size);
+    fs::path tmp = dst;
+    tmp += ".part";
+    fs::copy_file(local_3mf, tmp, fs::copy_options::overwrite_existing, ec);
+    if (!ec) fs::rename(tmp, dst, ec);
+    if (ec) {
+        fs::remove(tmp, ec);
+        BOOST_LOG_TRIVIAL(info) << "LanFtps: could not keep the sent job: " << ec.message();
+    }
 }
 
 void set_printer_state(std::string const &ip, bool printing, bool silent)
