@@ -2225,6 +2225,11 @@ void PreferencesDialog::create_items()
     auto item_enable_plugin    = create_item_checkbox(_L("Enable Bambu network plug-in"), "", "installed_networking");
     g_sizer->Add(item_enable_plugin);
 
+    auto item_auto_connect = create_item_checkbox(_L("Connect to the last used printer on startup"),
+                                                  _L("If enabled, Orca connects to the last selected LAN printer as soon as it is found on the network."),
+                                                  "auto_connect_last_printer");
+    g_sizer->Add(item_auto_connect);
+
     auto item_plugin_version = create_item_network_plugin_version(_L("Network plug-in version"), _L("Select the network plug-in version to use"));
     g_sizer->Add(item_plugin_version);
 

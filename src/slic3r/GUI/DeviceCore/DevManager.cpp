@@ -1101,14 +1101,18 @@ namespace Slic3r
 
     void DeviceManager::load_last_machine()
     {
-        // Only reconnect the remembered cloud machine. Do not select an arbitrary
+        // Only reconnect the remembered machine. Do not select an arbitrary
         // first machine: agent swaps intentionally leave the selection empty until
         // the new agent explicitly selects its configured printer.
-        if (userMachineList.empty())
+        if (userMachineList.empty() && localMachineList.empty())
             return;
 
         const auto& last_monitor_machine = get_user_last_machine();
-        if (userMachineList.find(last_monitor_machine) != userMachineList.end())
+        // Orca BambuLocal: a LAN only printer is never in the cloud list, so also accept a paired local one
+        const MachineObject* local_machine = get_local_machine(last_monitor_machine);
+        const AppConfig*     config        = get_app_config();
+        if (userMachineList.find(last_monitor_machine) != userMachineList.end() ||
+            (local_machine && local_machine->has_access_right() && config && config->get_bool("auto_connect_last_printer")))
             set_selected_machine(last_monitor_machine);
     }
 

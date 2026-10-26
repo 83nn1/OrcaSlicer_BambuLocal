@@ -702,6 +702,9 @@ void AppConfig::set_defaults()
         set_bool("installed_networking", false);
     }
 
+    if (get("auto_connect_last_printer").empty())
+        set_bool("auto_connect_last_printer", true);
+
 #ifdef __linux__
     if (get("window_buttons_on_left").empty())
         set_bool("window_buttons_on_left", false);

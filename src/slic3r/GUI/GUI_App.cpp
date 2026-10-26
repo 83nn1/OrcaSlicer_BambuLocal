@@ -1176,8 +1176,10 @@ void GUI_App::post_init()
     if(!m_networking_need_update && m_agent) {
         m_agent->set_on_ssdp_msg_fn(
             [this](std::string json_str) {
-                if (!is_closing() && m_device_manager)
+                if (!is_closing() && m_device_manager) {
                     m_device_manager->on_machine_alive(json_str);
+                    auto_connect_last_lan_machine(json_str);
+                }
             }
         );
         m_agent->set_on_http_error_fn([this](CloudEvent event, unsigned int status, std::string body) {
@@ -1835,8 +1837,10 @@ void GUI_App::restart_networking()
         init_networking_callbacks();
         m_agent->set_on_ssdp_msg_fn(
             [this](std::string json_str) {
-                if (!is_closing() && m_device_manager)
+                if (!is_closing() && m_device_manager) {
                     m_device_manager->on_machine_alive(json_str);
+                    auto_connect_last_lan_machine(json_str);
+                }
             }
         );
         m_agent->set_on_http_error_fn([this](CloudEvent event, unsigned int status, std::string body) {
@@ -4215,7 +4219,11 @@ void GUI_App::set_live_printer_agent(std::shared_ptr<IPrinterAgent> agent)
     // a standalone helper. Pass nullptr to clear the selection.
     if (DeviceManager* dev = getDeviceManager())
     {
+        // Orca BambuLocal: deselecting records an empty last machine, keep the remembered one so the
+        // new agent can connect it again (the startup agent swap would otherwise wipe it every time)
+        const std::string last_machine = dev->get_user_last_machine();
         dev->set_selected_machine(""); // why: empty id disconnects and deselects the current machine
+        dev->record_user_last_machine(last_machine);
         m_agent->set_user_selected_machine("");
         // note: belt-and-suspenders (precedent: DeviceManagerRefresher::on_timer)
         dev->OnSelectedMachineLost(); // why: clear stale sidebar sync-status / AMS
@@ -4225,6 +4233,8 @@ void GUI_App::set_live_printer_agent(std::shared_ptr<IPrinterAgent> agent)
     }
 
     m_agent->set_printer_agent(agent);
+    // the new agent starts without a selection, let its first SSDP announcement connect again
+    m_lan_auto_connect_done = false;
     sidebar().update_all_preset_comboboxes();
 }
 
@@ -4411,6 +4421,35 @@ void GUI_App::select_machine(const std::string& agent_id)
         MonitorPanel::on_machine_selected(m_device_manager->get_selected_machine());
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": set_selected_machine dev_id=" << dev_id;
     }
+}
+
+// Orca BambuLocal: connect the last used LAN printer once after startup, as soon as it announces
+// itself over SSDP (which also brings its current IP). load_last_machine() only runs when the
+// Device tab or a print dialog is opened.
+void GUI_App::auto_connect_last_lan_machine(const std::string& ssdp_json)
+{
+    if (m_lan_auto_connect_done || !m_device_manager || !app_config->get_bool("auto_connect_last_printer"))
+        return;
+
+    std::string dev_id;
+    try {
+        dev_id = json::parse(ssdp_json).value("dev_id", std::string());
+    } catch (...) {
+        return;
+    }
+    if (dev_id.empty() || dev_id != m_device_manager->get_user_last_machine())
+        return;
+
+    m_lan_auto_connect_done = true;
+    MachineObject* obj = m_device_manager->get_local_machine(dev_id);
+    if (m_device_manager->get_selected_machine() || !obj || !obj->is_lan_mode_printer() || !obj->has_access_right())
+        return;
+
+    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": connecting last used LAN printer dev_id=" << dev_id;
+    if (MonitorPanel* monitor = MonitorPanel::if_built())
+        monitor->select_machine(dev_id);
+    else if (m_device_manager->set_selected_machine(dev_id))
+        MonitorPanel::on_machine_selected(m_device_manager->get_selected_machine());
 }
 
 bool GUI_App::dark_mode()
