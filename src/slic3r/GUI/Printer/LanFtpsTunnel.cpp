@@ -423,7 +423,9 @@ private:
                         continue;
                     }
                     auto now = std::chrono::steady_clock::now();
-                    if (m_pending_times.empty() || (busy && now - m_last_job_time_read < BUSY_JOB_TIME_INTERVAL)) continue;
+                    if (m_pending_times.empty() || now < m_job_time_retry_at ||
+                        (busy && now - m_last_job_time_read < BUSY_JOB_TIME_INTERVAL))
+                        continue;
                     m_last_job_time_read = now;
                     l.unlock();
                     fetch_next_job_time();
@@ -939,12 +941,18 @@ private:
                 m_job_time_errors            = 0;
             } else if (map_error(res) == ERROR_PIPE) {
                 BOOST_LOG_TRIVIAL(info) << "LanFtps: reading start of " << e.path << " failed: " << curl_easy_strerror(res);
-                if (++m_job_time_errors >= 3) {
+                std::lock_guard<std::mutex> l(m_mutex);
+                if (++m_job_time_errors >= 5) {
                     // the printer does not like it, use its file times for this session
                     m_job_times_disabled = true;
-                    std::lock_guard<std::mutex> l(m_mutex);
                     m_pending_times.clear();
                     last = true;
+                } else {
+                    // a P1 does not answer FTPS for a minute or two while a print starts:
+                    // try the file again later, waiting longer after every failure
+                    m_pending_times.push_back(e);
+                    m_job_time_retry_at = std::chrono::steady_clock::now() + std::chrono::seconds(30 << (m_job_time_errors - 1));
+                    last = false;
                 }
             } else {
                 m_job_times[job_time_key(e)] = 0; // not a zip, nothing to learn
@@ -1489,6 +1497,7 @@ private:
     std::deque<json>        m_requests;
     std::deque<json>        m_deferred; // previews requested while the printer prints
     std::chrono::steady_clock::time_point m_last_job_time_read;
+    std::chrono::steady_clock::time_point m_job_time_retry_at; // after a failed read
     std::deque<std::string> m_responses;
     std::string             m_current;
     std::set<uint32_t>      m_cancelled;
