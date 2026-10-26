@@ -23,6 +23,8 @@ Dieser Fork holt sie in den LAN-Only-Modus zurück. Er spricht dafür direkt mit
 | Dateien vom PC auf die SD-Karte hochladen | ❌ | ✅ |
 | Druck direkt von der SD-Karte starten | ❌ | ✅ |
 | Richtiges Datum der Druckaufträge (der Drucker hat ohne Cloud keine verlässliche Uhr) | ❌ | ✅ |
+| Gerade gestarteter Druck steht im Speicher-Tab sofort oben, mit Vorschaubild | ❌ | ✅ |
+| Verbindung bleibt stabil, auch wenn der Drucker kurz nichts meldet | ❌ | ✅ |
 | Objekte während des Drucks überspringen | ❌ | ✅ |
 | Beim Start automatisch mit dem letzten Drucker verbinden | ❌ | ✅ |
 | Bambu-Handy-App, Zugriff von unterwegs | ❌ | ❌ |
@@ -38,7 +40,7 @@ Drucker, die OrcaSlicer schon von sich aus voll im LAN unterstützt (z. B. X1), 
 
 ## Download
 
-Der letzte gültige Build steht unter [Releases](https://github.com/83nn1/OrcaSlicer_BambuLocal/releases/latest). Direkt herunterladen:
+Der letzte gültige Build steht unter [Releases](https://github.com/83nn1/OrcaSlicer_BambuLocal/releases/latest), aktuell **V0.5.3**. Welche Version installiert ist, zeigen das Startfenster und *Hilfe → Über*. Direkt herunterladen:
 
 | Windows | Installer | Portable |
 |---|---|---|

@@ -6,7 +6,7 @@
 
 ## Versionsnummern
 
-Die Builds dieses Forks haben eine eigene Versionsnummer (`BambuLocal_VERSION` in `version.inc`, angezeigt unter *Hilfe → Über* und am Anfang des Logs). Die letzte Stelle steigt mit jedem Build, der zum Testen rausgeht, die mittlere mit jedem neuen Pull Request: 0.0.1, 0.0.2, … dann 0.1.1. Artefakte eines Pull Requests heißen z. B. `OrcaSlicer_Windows_V0.0.1_PR2_x64_portable`.
+Die Builds dieses Forks haben eine eigene Versionsnummer (`BambuLocal_VERSION` in `version.inc`). Startfenster, *Hilfe → Über* und der Anfang des Logs zeigen sie als `BambuLocal V0.5.3`, bei Builds aus einem Pull Request mit dessen Nummer: `BambuLocal V0.5.3 (PR #10)`. Die PR-Nummer setzt der Build-Workflow über die Umgebungsvariable `bambulocal_pr`. Die letzte Stelle steigt mit jedem Build, der zum Testen rausgeht, die mittlere mit jedem neuen Pull Request: 0.0.1, 0.0.2, … dann 0.1.1. Artefakte eines Pull Requests heißen z. B. `OrcaSlicer_Windows_V0.0.1_PR2_x64_portable`.
 
 ## Releases
 
