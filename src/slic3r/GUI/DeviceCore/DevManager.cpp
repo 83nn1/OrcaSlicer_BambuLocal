@@ -276,6 +276,9 @@ namespace Slic3r
     // A P1 / A1 in LAN only mode can stop sending its MQTT reports after heavy FTPS traffic
     // (storage browser previews, uploads) while it still announces itself over SSDP. It only
     // reports again on a new connection, which selecting the printer again also makes.
+    // It also only reports changes: an idle printer at steady temperatures can stay quiet for
+    // more than DISCONNECT_TIMEOUT without any problem. A small request (get_version, not
+    // pushall, which loads a P1 noticeably) makes it answer before it counts as disconnected.
     void DeviceManager::check_lan_ftps_reports()
     {
         MachineObject* obj = get_selected_machine();
@@ -283,6 +286,11 @@ namespace Slic3r
         if (!obj || !obj->is_lan_ftps_storage() || obj->m_push_count == 0) return;
         const auto now    = std::chrono::system_clock::now();
         const auto silent = std::chrono::duration_cast<std::chrono::milliseconds>(now - obj->last_update_time);
+        if (silent > std::chrono::seconds(15) && now - m_last_lan_keepalive > std::chrono::seconds(15)) {
+            BOOST_LOG_TRIVIAL(info) << "check_lan_ftps_reports: no report for " << silent.count() << " ms, asking dev_id=" << obj->get_dev_id();
+            m_last_lan_keepalive = now;
+            obj->command_get_version(false);
+        }
         const bool alive  = Slic3r::Utils::get_current_time_utc() - obj->last_alive < 15;
         if (silent.count() <= DISCONNECT_TIMEOUT || !alive || now - m_last_lan_reconnect < std::chrono::minutes(1)) return;
         BOOST_LOG_TRIVIAL(info) << "check_lan_ftps_reports: no report for " << silent.count() << " ms, reconnecting dev_id=" << obj->get_dev_id();

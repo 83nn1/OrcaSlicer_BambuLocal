@@ -256,17 +256,27 @@ std::string md5_hex(MD5_CTX &ctx)
     return out;
 }
 
-// Printers that are printing. Reading previews means downloading whole model
-// files, which keeps a P1 / A1 so busy while it prints that it stops answering
-// MQTT for minutes. The GUI marks them here, see set_printer_busy().
+// Printers that are printing or not reporting. Reading previews means downloading
+// whole model files, which keeps a P1 / A1 so busy while it prints that it stops
+// answering MQTT for minutes. The GUI marks them here, see set_printer_state().
 std::mutex            g_busy_mutex;
 std::set<std::string> g_busy_hosts;
+std::set<std::string> g_silent_hosts;
 
 bool printer_busy(std::string const &host)
 {
     std::lock_guard<std::mutex> l(g_busy_mutex);
     return g_busy_hosts.count(host) > 0;
 }
+
+bool printer_silent(std::string const &host)
+{
+    std::lock_guard<std::mutex> l(g_busy_mutex);
+    return g_silent_hosts.count(host) > 0;
+}
+
+// While printing, the start of a model file (job time) is read only now and then
+constexpr auto BUSY_JOB_TIME_INTERVAL = std::chrono::seconds(10);
 
 class Tunnel
 {
@@ -397,20 +407,24 @@ private:
             json req;
             {
                 std::unique_lock<std::mutex> l(m_mutex);
-                // requests first; deferred previews and missing job times only while
-                // idle and the printer is not printing (polled, busy has no notification)
+                // requests first; deferred previews only while idle and the printer is not
+                // printing, missing job times also while printing but one now and then
+                // (polled, busy has no notification). Nothing while the printer does not report.
                 m_cond.wait_for(l, std::chrono::seconds(1), [this] { return m_stopping || !m_requests.empty(); });
                 if (m_stopping) return;
                 if (m_requests.empty()) {
-                    if (printer_busy(m_host)) continue;
-                    if (!m_deferred.empty()) {
+                    if (printer_silent(m_host)) continue;
+                    bool busy = printer_busy(m_host);
+                    if (!busy && !m_deferred.empty()) {
                         BOOST_LOG_TRIVIAL(info) << "LanFtps: printer idle, loading deferred previews";
                         for (auto &r : m_deferred)
                             if (m_cancelled.count(r.value("sequence", 0u)) == 0) m_requests.push_back(std::move(r));
                         m_deferred.clear();
                         continue;
                     }
-                    if (m_pending_times.empty()) continue;
+                    auto now = std::chrono::steady_clock::now();
+                    if (m_pending_times.empty() || (busy && now - m_last_job_time_read < BUSY_JOB_TIME_INTERVAL)) continue;
+                    m_last_job_time_read = now;
                     l.unlock();
                     fetch_next_job_time();
                     continue;
@@ -899,8 +913,11 @@ private:
         {
             std::lock_guard<std::mutex> l(m_mutex);
             if (m_pending_times.empty()) return;
-            e = m_pending_times.front();
-            m_pending_times.pop_front();
+            // newest on the printer first: most likely the jobs that are not sorted right yet
+            auto it = std::max_element(m_pending_times.begin(), m_pending_times.end(),
+                                       [](Entry const &a, Entry const &b) { return a.time < b.time; });
+            e = *it;
+            m_pending_times.erase(it);
             last = m_pending_times.empty();
         }
         m_seq = NO_REQUEST;
@@ -1471,6 +1488,7 @@ private:
     std::condition_variable m_cond;
     std::deque<json>        m_requests;
     std::deque<json>        m_deferred; // previews requested while the printer prints
+    std::chrono::steady_clock::time_point m_last_job_time_read;
     std::deque<std::string> m_responses;
     std::string             m_current;
     std::set<uint32_t>      m_cancelled;
@@ -1520,14 +1538,18 @@ std::string make_url(std::string const &ip, std::string const &user, std::string
     return std::string(SCHEME) + ip + "?user=" + url_encode(user) + "&passwd=" + url_encode(passwd);
 }
 
-void set_printer_busy(std::string const &ip, bool busy)
+void set_printer_state(std::string const &ip, bool printing, bool silent)
 {
     if (ip.empty()) return;
     std::lock_guard<std::mutex> l(g_busy_mutex);
-    if (busy)
+    if (printing)
         g_busy_hosts.insert(ip);
     else
         g_busy_hosts.erase(ip);
+    if (silent)
+        g_silent_hosts.insert(ip);
+    else
+        g_silent_hosts.erase(ip);
 }
 
 int create(Bambu_Tunnel *tunnel, char const *url)

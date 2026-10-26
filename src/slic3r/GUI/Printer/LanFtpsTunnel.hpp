@@ -32,9 +32,10 @@ namespace LanFtps {
 bool        is_url(char const *url);
 std::string make_url(std::string const &ip, std::string const &user, std::string const &passwd);
 
-// While the printer at ip prints, previews (SUB_FILE) that are not cached yet and
-// the background job time reads wait, so the printer is not kept busy with FTPS.
-void set_printer_busy(std::string const &ip, bool busy);
+// While the printer at ip prints, previews (SUB_FILE) that are not cached yet wait and
+// the background job time reads are spaced out, so the printer is not kept busy with FTPS.
+// While it sends no MQTT reports (silent), no background reads are made at all.
+void set_printer_state(std::string const &ip, bool printing, bool silent);
 
 // Tunnel API, mirrors the Bambu_* functions of the network plug-in.
 int  create(Bambu_Tunnel *tunnel, char const *url);

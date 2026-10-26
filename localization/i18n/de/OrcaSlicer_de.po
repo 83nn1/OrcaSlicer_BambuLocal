@@ -7350,6 +7350,10 @@ msgstr "Sortierreihenfolge der Dateien."
 msgid "Previews are not loaded while the printer is printing, so that the printer is not overloaded."
 msgstr "Während eines laufenden Drucks werden keine Vorschaubilder geladen, damit der Drucker nicht überlastet wird."
 
+# AI Translated
+msgid "The printer is not responding at the moment, for example while a print starts. The storage is loaded as soon as it reports again."
+msgstr "Der Drucker antwortet gerade nicht, zum Beispiel während ein Druck startet. Der Speicher wird geladen, sobald er sich wieder meldet."
+
 msgid "Timelapse"
 msgstr "Zeitraffer"
 
