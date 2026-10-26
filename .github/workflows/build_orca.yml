@@ -126,6 +126,10 @@ jobs:
           echo "ver_pure=$ver_pure" >> $GITHUB_ENV
           echo "date=$(date +'%Y%m%d')" >> $GITHUB_ENV
           echo "git_commit_hash=$git_commit_hash" >> $GITHUB_ENV
+          # PR number shown with the fork version on the splash screen and in About
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "bambulocal_pr=${{ github.event.number }}" >> $GITHUB_ENV
+          fi
           # Per-arch Linux AppImage naming: amd64 keeps the historical unsuffixed
           # name (arch_suffix empty). Unused on macOS/Windows.
           if [ '${{ inputs.arch }}' = 'aarch64' ]; then
@@ -160,6 +164,10 @@ jobs:
           echo "ver=$ver" | Out-File -Append -FilePath $env:GITHUB_ENV -Encoding utf8
           echo "date=$date" | Out-File -Append -FilePath $env:GITHUB_ENV -Encoding utf8
           echo "git_commit_hash=$git_commit_hash" | Out-File -Append -FilePath $env:GITHUB_ENV -Encoding utf8
+          # PR number shown with the fork version on the splash screen and in About
+          if ($eventName -eq 'pull_request') {
+              echo "bambulocal_pr=$prNumber" | Out-File -Append -FilePath $env:GITHUB_ENV -Encoding utf8
+          }
           echo "date: ${{ env.date }} version: ${{ env.ver }}"
         shell: pwsh
 

@@ -1,6 +1,7 @@
 # Writes GIT_COMMIT_HASH and GIT_COMMIT_SUFFIX into a generated header.
 # GIT_COMMIT_SUFFIX is "-dirty" for a build with uncommitted changes, and empty
-# otherwise.
+# otherwise. BAMBULOCAL_PR is the pull request a CI build was made for (env
+# bambulocal_pr), empty otherwise.
 #
 # A custom target runs this at the start of every build, which picks up a new
 # commit without a reconfigure. The header is rewritten only when the value
@@ -35,12 +36,18 @@ if (NOT HASH)
     set(HASH "0000000") # uninitialized
 endif ()
 
+set(PR "")
+if (DEFINED ENV{bambulocal_pr})
+    string(REGEX REPLACE "[^0-9]" "" PR "$ENV{bambulocal_pr}")
+endif ()
+
 message(STATUS "Build commit: ${HASH}${SUFFIX}")
 
 string(CONCAT CONTENT
     "#pragma once\n"
     "#define GIT_COMMIT_HASH \"${HASH}\"\n"
-    "#define GIT_COMMIT_SUFFIX \"${SUFFIX}\"\n")
+    "#define GIT_COMMIT_SUFFIX \"${SUFFIX}\"\n"
+    "#define BAMBULOCAL_PR \"${PR}\"\n")
 
 set(OLD "")
 if (EXISTS "${OUT_FILE}")

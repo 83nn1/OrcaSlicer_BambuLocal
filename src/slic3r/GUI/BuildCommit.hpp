@@ -12,4 +12,8 @@ extern const char *const build_commit_hash;
 // wherever the build is shown to a person.
 extern const char *const build_commit_label;
 
+// Fork version and, for a CI build of a pull request, its number:
+// "BambuLocal V0.5.2 (PR #10)". Shown on the splash screen and in About.
+extern const char *const build_fork_label;
+
 }} // namespace Slic3r::GUI
