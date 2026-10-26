@@ -8,6 +8,8 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
 #include <boost/log/trivial.hpp>
 
 #include "nlohmann/json.hpp"
@@ -29,6 +31,7 @@
 #include <mutex>
 #include <set>
 #include <sstream>
+#include <string>
 #include <thread>
 #include <utility>
 #include <vector>
