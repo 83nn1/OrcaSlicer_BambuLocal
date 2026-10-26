@@ -505,7 +505,12 @@ public:
         rc.height = dc.GetTextExtent(m_text_version).GetHeight();
         dc.DrawLabel(m_text_version, rc, wxALIGN_CENTER);
 
+        // Orca BambuLocal: fork version and PR of the build under the version
         dc.SetFont(m_font_action);
+        rc.y += rc.height + FromDIP(4);
+        rc.height = dc.GetTextExtent(build_fork_label).GetHeight();
+        dc.DrawLabel(build_fork_label, rc, wxALIGN_CENTER);
+
         rc.y      = c_sz.GetHeight() * 0.85;
         rc.height = dc.GetTextExtent(m_text_action).GetHeight();
         dc.DrawLabel(m_text_action, rc, wxALIGN_CENTER);
@@ -2765,7 +2770,7 @@ void GUI_App::init_app_config()
     set_log_path_and_level(log_filename, 3);
 #endif
 
-    BOOST_LOG_TRIVIAL(info) << boost::format("gui mode, Current OrcaSlicer Version %1% (BambuLocal V%2%) build %3%") % SoftFever_VERSION % BambuLocal_VERSION % build_commit_label;
+    BOOST_LOG_TRIVIAL(info) << boost::format("gui mode, Current OrcaSlicer Version %1% (%2%) build %3%") % SoftFever_VERSION % build_fork_label % build_commit_label;
 
     //BBS: remove GCodeViewer as seperate APP logic
 	if (!app_config)

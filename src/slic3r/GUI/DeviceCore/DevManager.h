@@ -31,6 +31,7 @@ private:
     NetworkAgent* m_agent{ nullptr };
     AppConfig* m_app_config{ nullptr };
     std::chrono::system_clock::time_point m_last_lan_reconnect;
+    std::chrono::system_clock::time_point m_last_lan_keepalive;
     DeviceManagerRefresher* m_refresher{ nullptr };
 
     bool m_enable_mutil_machine = false;

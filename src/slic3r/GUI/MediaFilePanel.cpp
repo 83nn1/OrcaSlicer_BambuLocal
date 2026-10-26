@@ -297,9 +297,11 @@ void MediaFilePanel::UpdateByObj(MachineObject* obj)
         m_remote_proto = obj->get_file_remote();
         m_model_download_support = obj->file_model_download || use_lan_ftps();
 
+        m_last_report  = obj->last_update_time;
+
         // a P1 / A1 serving previews over FTPS while it prints stops answering MQTT
         bool printing = use_lan_ftps() && obj->is_in_printing();
-        Slic3r::LanFtps::set_printer_busy(m_lan_ip, printing);
+        Slic3r::LanFtps::set_printer_state(m_lan_ip, printing, use_lan_ftps() && printer_silent());
         if (m_preview_hint->IsShown() != printing) {
             m_preview_hint->Show(printing);
             Layout();
@@ -331,7 +333,8 @@ void MediaFilePanel::UpdateByObj(MachineObject* obj)
 
     Enable(obj && obj->is_info_ready() && obj->m_push_count > 0);
     if (machine == m_machine && !sdcard_state_changed) {
-        if ((m_waiting_enable && IsEnabled()) || (m_waiting_support && (m_local_proto || m_remote_proto))) {
+        if ((m_waiting_enable && IsEnabled() && !(use_lan_ftps() && printer_silent())) ||
+            (m_waiting_support && (m_local_proto || m_remote_proto))) {
             auto fs = m_image_grid->GetFileSystem();
             if (fs) fs->Retry();
         }
@@ -595,6 +598,14 @@ void MediaFilePanel::fetchUrl(boost::weak_ptr<PrinterFileSystem> wfs)
     m_waiting_enable = false;
     if (use_lan_ftps()) {
         m_waiting_support = false;
+        if (printer_silent()) {
+            // connecting now only fails after a timeout and adds load, retried on the next report
+            m_waiting_enable = true;
+            m_image_grid->SetStatus(m_bmp_loading, _L("The printer is not responding at the moment, for example while a print starts. "
+                                                      "The storage is loaded as soon as it reports again."));
+            fs->SetUrl("0");
+            return;
+        }
         BOOST_LOG_TRIVIAL(info) << "MediaFilePanel::fetchUrl: LAN only, using FTPS";
         fs->SetUrl(Slic3r::LanFtps::make_url(m_lan_ip, m_lan_user, m_lan_passwd));
         return;
