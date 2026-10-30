@@ -128,14 +128,6 @@ jobs:
             .\build_win.bat -d --arch ${{ inputs.arch }} --deps-dir $deps @flags
         shell: pwsh
 
-      # TEMP diagnosis: rerun only the failed deps steps serially so their error ends the log
-      - name: Show failing deps step
-        if: failure() && runner.os == 'Windows'
-        working-directory: ${{ github.workspace }}
-        run: |
-            $deps = (Split-Path "${{ github.workspace }}/${{ inputs.cache-path }}").Replace('\', '/')
-            cmake --build $deps --config Release --target deps -- -j1 2>&1 | Select-Object -Last 400
-        shell: pwsh
 
       - name: Build on Mac ${{ inputs.arch }}
         if: runner.os == 'macOS'
