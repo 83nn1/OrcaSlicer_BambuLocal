@@ -36,7 +36,7 @@ Nicht möglich ist nur, was zwingend über die Server von Bambu Lab läuft: die 
 - Für Besitzer eines Bambu-Lab-Druckers der Serien **P1** (P1P, P1S) oder **A1** (A1, A1 mini), die den Drucker im LAN-Only-Modus betreiben. Getestet ist alles an einem P1S.
 - Für Windows (x64 und ARM64).
 
-Drucker, die OrcaSlicer schon von sich aus voll im LAN unterstützt (z. B. X1), und Drucker im Cloud-Modus verhalten sich wie im Original-OrcaSlicer. Abgesehen von den oben genannten Funktionen ist der Fork ein ganz normales OrcaSlicer und wird regelmäßig mit dem Original abgeglichen.
+Drucker, die OrcaSlicer schon von sich aus voll im LAN unterstützt (z. B. X1), und Drucker im Cloud-Modus verhalten sich wie im Original-OrcaSlicer. Abgesehen von den oben genannten Funktionen ist der Fork ein ganz normales OrcaSlicer und wird regelmäßig mit dem Original abgeglichen. Aktuelle Basis ist OrcaSlicer 2.5.0 Beta.
 
 ## Download
 
