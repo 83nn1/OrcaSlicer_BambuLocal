@@ -128,7 +128,6 @@ jobs:
             .\build_win.bat -d --arch ${{ inputs.arch }} --deps-dir $deps @flags
         shell: pwsh
 
-
       - name: Build on Mac ${{ inputs.arch }}
         if: runner.os == 'macOS'
         working-directory: ${{ github.workspace }}
