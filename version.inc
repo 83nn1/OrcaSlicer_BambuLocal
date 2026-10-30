@@ -7,7 +7,7 @@ set(SLIC3R_APP_KEY "OrcaSlicer")
 if(NOT DEFINED BBL_INTERNAL_TESTING)
 set(BBL_INTERNAL_TESTING "0")
 endif()
-set(SoftFever_VERSION "2.5.0-dev")
+set(SoftFever_VERSION "2.5.0-beta")
 string(REGEX MATCH "^([0-9]+)\\.([0-9]+)\\.([0-9]+)"
        SoftFever_VERSION_MATCH ${SoftFever_VERSION})
 set(ORCA_VERSION_MAJOR ${CMAKE_MATCH_1})
@@ -19,7 +19,7 @@ set(SLIC3R_VERSION "02.08.01.55")
 # Version of this fork's builds, shown in the about dialog and in the names of the CI
 # artifacts. The patch number goes up with every build handed out for testing, the minor
 # number with every new pull request (0.0.1, 0.0.2, ... then 0.1.1).
-set(BambuLocal_VERSION "0.5.3")
+set(BambuLocal_VERSION "0.6.1")
 
 if (NOT DEFINED ORCA_UPDATER_SIG_KEY)
     set(ORCA_UPDATER_SIG_KEY "" CACHE STRING "Base64url encoded updater signature key")

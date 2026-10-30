@@ -94,6 +94,7 @@ private:
     ::Button *m_button_download = nullptr;
     ::Button *m_button_refresh = nullptr;
     ::Button *m_button_management = nullptr;
+    ::Button *m_button_select_all = nullptr;
     ::Button *m_button_upload = nullptr;
     ::ComboBox *m_sort_box = nullptr;
 
