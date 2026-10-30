@@ -59,7 +59,9 @@ jobs:
           else
             echo "No C++ changes under src/ or tests/."
           fi
-          if ! git diff --quiet HEAD^1 -- deps; then
+          # Orca BambuLocal: with WINDOWS_ONLY no Linux build saves this PR's deps, so
+          # treat it like a PR that keeps deps/ and parse against the newest cache
+          if ! git diff --quiet HEAD^1 -- deps && [ -z "${{ vars.WINDOWS_ONLY }}" ]; then
             echo "deps=true" >> "$GITHUB_OUTPUT"
           fi
           echo "deps-key=linux-clang-cache-orcaslicer_deps-build-${{ hashFiles('deps/**') }}" >> "$GITHUB_OUTPUT"
