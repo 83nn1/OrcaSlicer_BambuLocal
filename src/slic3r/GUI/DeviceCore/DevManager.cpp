@@ -1189,6 +1189,9 @@ namespace Slic3r
     {
         // A cloud printer is listed only once the account's machine list arrives, so until a list is
         // accepted (parse_user_print_info) or a selection is made, the restore stays pending.
+        // Orca BambuLocal: the user can turn reconnecting at startup off in the preferences.
+        if (const AppConfig* config = get_app_config(); config && !config->get_bool("auto_connect_last_printer"))
+            return;
         m_restore_last_machine = true;
         load_last_machine();
     }

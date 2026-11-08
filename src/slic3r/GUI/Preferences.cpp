@@ -2269,7 +2269,7 @@ void PreferencesDialog::create_items()
     g_sizer->Add(item_enable_plugin);
 
     auto item_auto_connect = create_item_checkbox(_L("Connect to the last used printer on startup"),
-                                                  _L("If enabled, Orca connects to the last selected LAN printer as soon as it is found on the network."),
+                                                  _L("If enabled, Orca connects to the last selected printer on startup. A LAN printer is connected as soon as it is found on the network."),
                                                   "auto_connect_last_printer");
     g_sizer->Add(item_auto_connect);
 

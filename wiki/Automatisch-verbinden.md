@@ -1,16 +1,12 @@
 # Automatisch mit dem letzten Drucker verbinden
 
-Im Cloud-Modus verbindet sich Orca beim Start von selbst mit dem zuletzt benutzten Drucker. Im LAN-Only-Modus musste man den Drucker bisher nach jedem Neustart von Hand auswählen.
+Orca verbindet sich beim Start mit dem zuletzt benutzten Drucker. Seit OrcaSlicer 2.5.0 macht das Original das selbst (`DeviceManager::restore_last_machine()`), für LAN- und Cloud-Drucker, aber ohne Einstellung. Einen LAN-Drucker findet es dabei nur, wenn er beim Start schon im Netzwerk gesehen wurde.
 
-## Problem
+## Lösung im Fork
 
-`load_last_machine()` sah nur in der Liste der Cloud-Drucker nach, die im LAN-Only-Modus leer ist, und lief erst, wenn der Gerät-Tab oder ein Druckdialog geöffnet wurde. Außerdem tauscht Orca bei jedem Start den Drucker-Agenten aus und hat dabei den zuletzt gewählten Drucker vergessen.
-
-## Lösung
-
-- `load_last_machine()` akzeptiert auch einen lokal gekoppelten Drucker mit Access Code.
-- Orca wählt den zuletzt benutzten LAN-Drucker einmal aus, sobald er sich nach dem Start (oder nach einem Agentenwechsel) zum ersten Mal per SSDP im Netzwerk meldet.
-- Der zuletzt gewählte Drucker bleibt beim Agentenwechsel erhalten.
+- Orca wählt den zuletzt benutzten LAN-Drucker einmal aus, sobald er sich nach dem Start (oder nach einem Agentenwechsel) zum ersten Mal per SSDP im Netzwerk meldet. Ist schon ein Drucker gewählt, passiert nichts, es gibt also keine doppelte Verbindung.
+- Eine Einstellung schaltet beides ab: das Verbinden beim SSDP-Signal und das Wiederherstellen beim Start aus dem Original.
+- Öffnet man den Gerät-Tab oder einen Druckdialog, wählt Orca den zuletzt benutzten Drucker wie im Original auch bei ausgeschalteter Einstellung.
 
 ## Einstellung
 
