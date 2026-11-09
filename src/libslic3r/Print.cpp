@@ -199,7 +199,10 @@ static std::optional<BedExclusionCollision> colliding_bed_exclusion(
             std::optional<BedExclusionCollision>(BedExclusionCollision{ *first_collision, true }) : std::nullopt;
     }
 
-    for (const unsigned int filament_id : print_object.printing_extruders()) {
+    // A mixed filament prints with its component filaments.
+    const std::vector<unsigned int> filament_ids = expand_mixed_filaments(print_object.printing_extruders(),
+        print.config().filament_is_mixed.values, print.config().filament_mixed_components.values);
+    for (const unsigned int filament_id : filament_ids) {
         const int resolved_extruder = bed_exclusion_extruder_for_filament(
             filament_id, print.get_filament_maps(), print.get_filament_map_mode(), print.is_BBL_printer(),
             true, regions_by_extruder.size());
@@ -398,6 +401,7 @@ bool Print::invalidate_state_by_config_options(const ConfigOptionResolver & /* n
         "wipe_inward",
         "wipe_inward_distance",
         "gcode_comments",
+        "high_precision_gcode",
         "gcode_label_objects", 
         "exclude_object",
         "exclude_object_tolerance",
@@ -950,7 +954,9 @@ StringObjectException Print::sequential_print_clearance_valid(const Print &print
                     const std::string collision_message = !exclusion_collision->collision_volume ?
                         (boost::format(L("%1% is too close to exclusion area. There may be collisions when printing.")) % instance.model_instance->get_object()->name).str() :
                         is_auto_filament_map_mode(print.get_filament_map_mode()) && print.is_BBL_printer() ?
+                            // TRN %1% is the object name.
                             (boost::format(L("%1% intersects collision volumes for every available extruder.")) % instance.model_instance->get_object()->name).str() :
+                            // TRN %1% is the object name, %2% the extruder number counted from 1.
                             (boost::format(L("%1% intersects a collision volume for extruder %2%.")) % instance.model_instance->get_object()->name % (exclusion_collision->extruder_id + 1)).str();
                     if (single_object_exception.string.empty()) {
                         single_object_exception.string = collision_message;
@@ -1987,6 +1993,23 @@ StringObjectException Print::validate(std::vector<StringObjectException> *warnin
     if (extruders.empty())
         return { L("No extrusions under current settings.") };
 
+    // A flow ratio of 0 would extrude nothing, and a nil one would write NaN extrusion lengths.
+    {
+        const std::vector<double> &flow_ratios = m_config.filament_flow_ratio.values;
+        const std::vector<int>    &self_index  = m_config.filament_self_index.values;
+        for (size_t column = 0; column < flow_ratios.size(); ++column) {
+            // filament_self_index maps a column to its filament once the filament arrays hold one column per variant
+            const unsigned int filament_id = self_index.size() == flow_ratios.size() ? self_index[column] - 1 : column;
+            if (flow_ratios[column] > 0. || !std::binary_search(extruders.begin(), extruders.end(), filament_id))
+                continue;
+            StringObjectException err;
+            // TRN %1% is the filament number as shown in the filament list, starting from 1.
+            err.string  = Slic3r::format(L("The flow ratio of filament %1% must be greater than 0."), filament_id + 1);
+            err.opt_key = "filament_flow_ratio";
+            return err;
+        }
+    }
+
     // IDEX/IQEX: block multi-color in non-primary parallel modes when the active
     // configuration can't physically support it (no within-gantry toolchange path
     // or MMU lane sharing). See imex_multicolor_block_reason() for the full rule.
@@ -2386,7 +2409,7 @@ StringObjectException Print::validate(std::vector<StringObjectException> *warnin
                 print_object.model_object(),
                 ""
             };
-        } else if (effective_max_z > this->config().printable_height + EPSILON) {
+        } else if (compensated_max_z > this->config().printable_height + EPSILON) {
             return StringObjectException{
                 last_layer_below_max ?
                 Slic3r::format(_u8L("While the object %1% itself fits the build volume, its last layer exceeds the maximum build volume height."), print_object.model_object()->name) +
@@ -2956,13 +2979,15 @@ StringObjectException Print::validate(std::vector<StringObjectException> *warnin
                     m_config.enable_pressure_advance.get_at(column)) {
 
                     const std::string pa_model = m_config.adaptive_pressure_advance_model.get_at(column);
-                    if (!pa_model.empty()) {
-                        std::string validation_error = AdaptivePAProcessor::validate_adaptive_pa_model(pa_model);
-                        if (!validation_error.empty()) {
-                            warn(L("The Adaptive Pressure Advance model for one or more extruders may contain invalid values."),
-                                 "adaptive_pressure_advance_model");
-                            break;
-                        }
+                    if (!AdaptivePAProcessor::adaptive_pa_model_has_measurements(pa_model)) {
+                        warn(L("Adaptive pressure advance is enabled for one or more extruders, but no measurements have been entered in their Adaptive Pressure Advance model."),
+                             "adaptive_pressure_advance_model");
+                        break;
+                    }
+                    if (!AdaptivePAProcessor::validate_adaptive_pa_model(pa_model).empty()) {
+                        warn(L("The Adaptive Pressure Advance model for one or more extruders may contain invalid values."),
+                             "adaptive_pressure_advance_model");
+                        break;
                     }
                 }
             }
@@ -4895,7 +4920,8 @@ std::vector<std::set<int>> Print::get_physical_unprintable_filaments(const std::
     auto get_unprintable_extruder_id = [&](unsigned int filament_idx) -> int {
         // filament_printable may be shorter than the filament count; get_at() clamps.
         int status = m_config.filament_printable.get_at(filament_idx);
-        for (int i = 0; i < extruder_num; ++i) {
+        // An int has bits for the first 32 extruders only.
+        for (int i = 0; i < std::min(extruder_num, 32); ++i) {
             if (!(status >> i & 1)) {
                 return i;
             }
