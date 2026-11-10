@@ -27,6 +27,7 @@ Dieser Fork holt sie in den LAN-Only-Modus zurück. Er spricht dafür direkt mit
 | Verbindung bleibt stabil, auch wenn der Drucker kurz nichts meldet | ❌ | ✅ |
 | Objekte während des Drucks überspringen | ❌ | ✅ |
 | Beim Start automatisch mit dem letzten Drucker verbinden (abschaltbar) | ⚠️¹ | ✅ |
+| Desktop-Benachrichtigung, wenn ein Druck fertig ist, abbricht oder pausiert (abschaltbar) | ❌ | ✅ |
 | Bambu-Handy-App, Zugriff von unterwegs | ❌ | ❌ |
 
 ¹ Seit OrcaSlicer 2.5.0 verbindet sich auch das Original beim Start wieder, aber ohne Einstellung und mit einem LAN-Drucker nur, wenn es ihn beim Start schon im Netzwerk gefunden hat. Der Fork verbindet, sobald sich der Drucker meldet, und lässt sich abschalten.
@@ -64,6 +65,7 @@ Wie die einzelnen Funktionen arbeiten, was getestet ist und wie man den Fork sel
 - [Speicher-Tab (SD-Karte)](https://github.com/83nn1/OrcaSlicer_BambuLocal/wiki/Speicher-Tab)
 - [Objekte überspringen](https://github.com/83nn1/OrcaSlicer_BambuLocal/wiki/Objekte-überspringen)
 - [Automatisch verbinden](https://github.com/83nn1/OrcaSlicer_BambuLocal/wiki/Automatisch-verbinden)
+- [Benachrichtigungen](https://github.com/83nn1/OrcaSlicer_BambuLocal/wiki/Benachrichtigungen)
 - [Teststand](https://github.com/83nn1/OrcaSlicer_BambuLocal/wiki/Teststand)
 - [Bauen, Versionen und Releases](https://github.com/83nn1/OrcaSlicer_BambuLocal/wiki/Bauen-und-Versionen)
 

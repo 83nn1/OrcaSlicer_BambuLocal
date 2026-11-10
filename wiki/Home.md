@@ -7,6 +7,7 @@ Technische Dokumentation zu diesem Fork von [OrcaSlicer](https://github.com/Orca
 - [Speicher-Tab (SD-Karte)](Speicher-Tab): Dateien ansehen, herunterladen, löschen, hochladen und von der SD-Karte drucken, per FTPS statt über die Cloud
 - [Objekte überspringen](Objekte-überspringen): einzelne Objekte während des Drucks abbrechen
 - [Automatisch verbinden](Automatisch-verbinden): beim Start mit dem zuletzt benutzten LAN-Drucker verbinden
+- [Benachrichtigungen](Benachrichtigungen): Desktop-Meldung, wenn ein Druck fertig ist, abbricht oder pausiert
 
 ## Weiteres
 
