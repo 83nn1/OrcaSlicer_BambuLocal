@@ -1,8 +1,8 @@
 # Bauen, Versionen und Releases
 
-## Windows-Installer über GitHub Actions
+## Installer über GitHub Actions
 
-*Actions → Build all → Run workflow*, danach unter *Artifacts* herunterladen.
+*Actions → Build all → Run workflow*, danach unter *Artifacts* herunterladen. Jeder Lauf baut Windows (x64, ARM64), macOS (Universal-DMG aus arm64 und x86_64) und Linux (AppImage und Flatpak für x86_64 und aarch64). Die macOS-App ist nicht signiert und nicht notarisiert, weil das ein Apple-Entwicklerkonto braucht; das Original signiert nur in seinem eigenen Repo.
 
 ## Versionsnummern
 
@@ -12,7 +12,7 @@ Die Builds dieses Forks haben eine eigene Versionsnummer (`BambuLocal_VERSION` i
 
 Ein Release entsteht aus einem erfolgreichen *Build all*-Lauf auf `main`: *Actions → BambuLocal release → Run workflow* mit dessen Run-ID und der Version aus `version.inc`. Builds aus Pull Requests werden nicht veröffentlicht.
 
-Die Dateinamen im Release sind immer gleich (`OrcaSlicer_BambuLocal_Windows_{x64,arm64}_{Installer.exe,portable.zip}`), die Download-Links im README zeigen deshalb immer auf das neueste Release.
+Die Dateinamen im Release sind immer gleich (`OrcaSlicer_BambuLocal_Windows_{x64,arm64}_{Installer.exe,portable.zip}`, `OrcaSlicer_BambuLocal_macOS_universal.dmg`, `OrcaSlicer_BambuLocal_Linux_{x86_64,aarch64}.AppImage`), die Download-Links im README zeigen deshalb immer auf das neueste Release.
 
 ## Abgleich mit OrcaSlicer
 
