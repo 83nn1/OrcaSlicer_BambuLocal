@@ -26,8 +26,10 @@ Dieser Fork holt sie in den LAN-Only-Modus zurück. Er spricht dafür direkt mit
 | Gerade gestarteter Druck steht im Speicher-Tab sofort oben, mit Vorschaubild | ❌ | ✅ |
 | Verbindung bleibt stabil, auch wenn der Drucker kurz nichts meldet | ❌ | ✅ |
 | Objekte während des Drucks überspringen | ❌ | ✅ |
-| Beim Start automatisch mit dem letzten Drucker verbinden | ❌ | ✅ |
+| Beim Start automatisch mit dem letzten Drucker verbinden (abschaltbar) | ⚠️¹ | ✅ |
 | Bambu-Handy-App, Zugriff von unterwegs | ❌ | ❌ |
+
+¹ Seit OrcaSlicer 2.5.0 verbindet sich auch das Original beim Start wieder, aber ohne Einstellung und mit einem LAN-Drucker nur, wenn es ihn beim Start schon im Netzwerk gefunden hat. Der Fork verbindet, sobald sich der Drucker meldet, und lässt sich abschalten.
 
 Nicht möglich ist nur, was zwingend über die Server von Bambu Lab läuft: die Handy-App (Bambu Handy) und damit der Zugriff von außerhalb des eigenen Netzwerks.
 
@@ -40,7 +42,7 @@ Drucker, die OrcaSlicer schon von sich aus voll im LAN unterstützt (z. B. X1), 
 
 ## Download
 
-Der letzte gültige Build steht unter [Releases](https://github.com/83nn1/OrcaSlicer_BambuLocal/releases/latest), aktuell **V0.5.3**. Welche Version installiert ist, zeigen das Startfenster und *Hilfe → Über*. Direkt herunterladen:
+Der letzte gültige Build steht unter [Releases](https://github.com/83nn1/OrcaSlicer_BambuLocal/releases/latest), aktuell **V0.7.2** auf Basis von OrcaSlicer 2.5.0. Welche Version installiert ist, zeigen das Startfenster und *Hilfe → Über*. Direkt herunterladen:
 
 | Windows | Installer | Portable |
 |---|---|---|
@@ -53,7 +55,7 @@ Der letzte gültige Build steht unter [Releases](https://github.com/83nn1/OrcaSl
 2. OrcaSlicer_BambuLocal installieren oder die Portable-Version entpacken und starten.
 3. Im Tab *Gerät* den Drucker hinzufügen und den Access Code eingeben.
 
-Ab dann stehen Speicher-Tab, Objekte überspringen und die übrigen Funktionen zur Verfügung. Beim nächsten Start verbindet sich Orca von selbst wieder mit dem Drucker.
+Ab dann stehen Speicher-Tab, Objekte überspringen und die übrigen Funktionen zur Verfügung. Beim nächsten Start verbindet sich Orca von selbst wieder mit dem Drucker. Wer das nicht möchte, schaltet es unter *Einstellungen → Online → „Connect to the last used printer on startup“* ab.
 
 ## Mehr erfahren
 
