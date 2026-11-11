@@ -36,7 +36,7 @@ Nicht möglich ist nur, was zwingend über die Server von Bambu Lab läuft: die 
 ## Für wen ist das?
 
 - Für Besitzer eines Bambu-Lab-Druckers der Serien **P1** (P1P, P1S) oder **A1** (A1, A1 mini), die den Drucker im LAN-Only-Modus betreiben. Getestet ist alles an einem P1S.
-- Für Windows (x64 und ARM64).
+- Für Windows (x64 und ARM64), macOS (Apple Silicon und Intel) und Linux (x86_64 und ARM64). Getestet wird unter Windows, die macOS- und Linux-Builds entstehen aus demselben Code, sind aber nicht an einem Drucker geprüft.
 
 Drucker, die OrcaSlicer schon von sich aus voll im LAN unterstützt (z. B. X1), und Drucker im Cloud-Modus verhalten sich wie im Original-OrcaSlicer. Abgesehen von den oben genannten Funktionen ist der Fork ein ganz normales OrcaSlicer und wird regelmäßig mit dem Original abgeglichen. Aktuelle Basis ist OrcaSlicer 2.5.0.
 
@@ -48,6 +48,14 @@ Der letzte gültige Build steht unter [Releases](https://github.com/83nn1/OrcaSl
 |---|---|---|
 | x64 | [OrcaSlicer_BambuLocal_Windows_x64_Installer.exe](https://github.com/83nn1/OrcaSlicer_BambuLocal/releases/latest/download/OrcaSlicer_BambuLocal_Windows_x64_Installer.exe) | [OrcaSlicer_BambuLocal_Windows_x64_portable.zip](https://github.com/83nn1/OrcaSlicer_BambuLocal/releases/latest/download/OrcaSlicer_BambuLocal_Windows_x64_portable.zip) |
 | ARM64 | [OrcaSlicer_BambuLocal_Windows_arm64_Installer.exe](https://github.com/83nn1/OrcaSlicer_BambuLocal/releases/latest/download/OrcaSlicer_BambuLocal_Windows_arm64_Installer.exe) | [OrcaSlicer_BambuLocal_Windows_arm64_portable.zip](https://github.com/83nn1/OrcaSlicer_BambuLocal/releases/latest/download/OrcaSlicer_BambuLocal_Windows_arm64_portable.zip) |
+
+| macOS und Linux | Download |
+|---|---|
+| macOS (Apple Silicon und Intel) | [OrcaSlicer_BambuLocal_macOS_universal.dmg](https://github.com/83nn1/OrcaSlicer_BambuLocal/releases/latest/download/OrcaSlicer_BambuLocal_macOS_universal.dmg) |
+| Linux x86_64 | [OrcaSlicer_BambuLocal_Linux_x86_64.AppImage](https://github.com/83nn1/OrcaSlicer_BambuLocal/releases/latest/download/OrcaSlicer_BambuLocal_Linux_x86_64.AppImage) |
+| Linux ARM64 | [OrcaSlicer_BambuLocal_Linux_aarch64.AppImage](https://github.com/83nn1/OrcaSlicer_BambuLocal/releases/latest/download/OrcaSlicer_BambuLocal_Linux_aarch64.AppImage) |
+
+Die macOS-App ist nicht von Apple signiert. Nach dem Kopieren nach *Programme* blockiert macOS den ersten Start; im Terminal hilft `xattr -dr com.apple.quarantine /Applications/OrcaSlicer.app`. Die AppImage-Datei unter Linux vor dem ersten Start ausführbar machen (`chmod +x`).
 
 ## So geht's los
 
