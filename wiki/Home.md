@@ -8,6 +8,7 @@ Technische Dokumentation zu diesem Fork von [OrcaSlicer](https://github.com/Orca
 - [Objekte überspringen](Objekte-überspringen): einzelne Objekte während des Drucks abbrechen
 - [Automatisch verbinden](Automatisch-verbinden): beim Start mit dem zuletzt benutzten LAN-Drucker verbinden
 - [Druckermodelle](Druckermodelle): was bei P1/A1 und was bei X1, X2D und H2 gilt
+- [Benachrichtigungen](Benachrichtigungen): Desktop-Meldung, wenn ein Druck fertig ist, abbricht oder pausiert
 
 ## Weiteres
 

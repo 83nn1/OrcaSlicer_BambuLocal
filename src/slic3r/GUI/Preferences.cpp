@@ -2273,6 +2273,11 @@ void PreferencesDialog::create_items()
                                                   "auto_connect_last_printer");
     g_sizer->Add(item_auto_connect);
 
+    auto item_notify_print_state = create_item_checkbox(_L("Notify when a print finishes, stops or pauses"),
+                                                        _L("If enabled, Orca shows a desktop notification when a print on a connected printer finishes, is cancelled, fails or pauses. Click it to open the Device tab."),
+                                                        "notify_print_state");
+    g_sizer->Add(item_notify_print_state);
+
     auto item_plugin_version = create_item_network_plugin_version(_L("Network plug-in version"), _L("Select the network plug-in version to use"));
     g_sizer->Add(item_plugin_version);
 

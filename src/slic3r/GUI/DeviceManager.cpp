@@ -39,6 +39,10 @@
 #include <exception>
 #include "libslic3r/LocalesUtils.hpp"
 #include "libslic3r/LifecycleEvents.hpp"
+#include "format.hpp"
+#include "GUI.hpp"
+#include "libslic3r/AppConfig.hpp"
+#include <wx/notifmsg.h>
 #include <system_error>
 #include "libslic3r/ProjectTask.hpp"
 #include <cstring>
@@ -2650,10 +2654,70 @@ void MachineObject::reset()
     m_partskip_ids.clear();
 }
 
+// BambuLocal: desktop notification when a running print ends, fails or pauses, so a
+// LAN-only printer (no Bambu Handy push) can be left alone while it prints. Only real
+// transitions out of a running job count: the first report after (re)connecting starts
+// from an empty status and stays silent.
+static void notify_print_state_change(const MachineObject &obj, const std::string &from, const std::string &to)
+{
+    const bool was_running = from == "RUNNING" || from == "PREPARE" || from == "SLICING";
+    wxString   title;
+    if (to == "FINISH" && (was_running || from == "PAUSE"))
+        title = _L("Print finished");
+    else if (to == "FAILED" && (was_running || from == "PAUSE"))
+        title = _L("Print stopped");
+    else if (to == "PAUSE" && was_running)
+        title = _L("Print paused");
+    else
+        return;
+
+    GUI::GUI_App &app = GUI::wxGetApp();
+    if (app.is_closing() || !app.mainframe || !app.app_config->get_bool("notify_print_state"))
+        return;
+
+    const wxString printer = GUI::from_u8(obj.get_dev_name());
+    const wxString job     = GUI::from_u8(obj.subtask_name);
+    wxString       message;
+    if (to == "FINISH")
+        // TRN %1% is the printer name, %2% the name of the print job
+        message = job.empty() ? GUI::format_wxstr(_L("%1% has finished printing."), printer) :
+                                GUI::format_wxstr(_L("%1%: \"%2%\" is done."), printer, job);
+    else if (to == "FAILED")
+        // TRN %1% is the printer name, %2% the name of the print job
+        message = job.empty() ? GUI::format_wxstr(_L("%1% has stopped printing. Check the printer."), printer) :
+                                GUI::format_wxstr(_L("%1%: \"%2%\" was cancelled or failed. Check the printer."), printer, job);
+    else
+        // TRN %1% is the printer name, %2% the name of the print job
+        message = job.empty() ? GUI::format_wxstr(_L("%1% has paused the print. Check the printer."), printer) :
+                                GUI::format_wxstr(_L("%1%: \"%2%\" is paused. Check the printer."), printer, job);
+
+    BOOST_LOG_TRIVIAL(info) << "BambuLocal: print state " << from << " -> " << to << ", showing notification";
+
+    // The notification must outlive Show(); a new one replaces the last. Deliberately never
+    // freed at exit, when wx is already torn down.
+    static wxNotificationMessage *notification = nullptr;
+    delete notification;
+    notification = new wxNotificationMessage(title, message, app.mainframe, to == "FINISH" ? wxICON_INFORMATION : wxICON_WARNING);
+    const std::string dev_id = obj.get_dev_id();
+    notification->Bind(wxEVT_NOTIFICATION_MESSAGE_CLICK, [dev_id](wxCommandEvent &) {
+        GUI::GUI_App &app = GUI::wxGetApp();
+        if (app.is_closing() || !app.mainframe)
+            return;
+        if (app.mainframe->IsIconized())
+            app.mainframe->Iconize(false);
+        app.mainframe->Raise();
+        app.mainframe->jump_to_monitor(dev_id);
+    });
+    notification->Show(wxNotificationMessage::Timeout_Auto);
+}
+
 void MachineObject::set_print_state(std::string status)
 {
     const bool changed = (print_status != status);
+    const std::string previous = print_status;
     print_status = status;
+    if (changed && !previous.empty())
+        notify_print_state_change(*this, previous, print_status);
     if (changed) {
         LifecycleEventContext ctx;
         ctx.name  = dev_id;
