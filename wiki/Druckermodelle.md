@@ -19,6 +19,10 @@ Kommt der Dateidienst eines solchen Druckers nicht zustande (z. B. weil Plugin u
 - Sortierung im Speicher-Tab (neueste zuerst, Name …) gilt für beide Wege.
 - Das Halten der Verbindung (`get_version` nach 15 s Stille) und die Kopie des gesendeten Auftrags gelten nur für Drucker ohne Dateidienst, weil nur dort der Fork die Verbindung selbst übernimmt.
 
+## H3C
+
+Den H3C (Werkzeugwechsler mit neun Köpfen, erschienen im November 2026) kennt OrcaSlicer noch nicht, auch nicht in der aktuellen Entwicklungsversion: Es gibt weder ein Druckerprofil noch eine Gerätebeschreibung. Sobald das Original ihn unterstützt und der Fork diesen Stand übernimmt, gelten für ihn dieselben Regeln wie oben, weil der Fork nicht nach Modell, sondern nach den Meldungen des Druckers entscheidet.
+
 ## Getestet
 
 Getestet ist nur der P1S (siehe [Teststand](Teststand)). X1C, X2D und H2C sind nicht an echter Hardware geprüft. Ungeklärt ist dort vor allem, ob beim FTPS-Ausweichweg „Drucken vom Speicher“ mit dem Pfad `sdcard/<datei>` startet (H2C und X2D haben zusätzlich einen internen Speicher) und welche Ordner die Drucker per FTPS zeigen. Rückmeldungen mit Log (`%APPDATA%\OrcaSlicer\log`, Suche nach `LanFtps` und `MediaFilePanel`) helfen.
