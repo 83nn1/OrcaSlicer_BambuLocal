@@ -134,6 +134,9 @@ private:
     std::vector<int>                m_partskip_ids;
 
     enum URL_STATE m_url_state = URL_STATE::URL_TCP;
+    // the plug-in's file service of a LAN printer (X1 / H2 / X2) failed, the job's files are read over FTPS
+    bool m_lan_ftps_fallback{false};
+    bool use_lan_ftps(const MachineObject *obj) const;
 
     PartsInfo GetPartsInfo();
     bool      is_drag_mode();

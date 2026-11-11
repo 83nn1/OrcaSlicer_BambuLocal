@@ -58,9 +58,9 @@ private:
 
     void fetchUrl(boost::weak_ptr<PrinterFileSystem> fs);
 
-    // LAN only printer without the local file service of the network plug-in (e.g. P1/A1):
-    // browse the storage over FTPS instead
-    bool use_lan_ftps() const { return m_lan_mode && !m_local_proto && !m_lan_ip.empty() && !m_lan_passwd.empty(); }
+    // LAN only printer without the local file service of the network plug-in (e.g. P1/A1), or one
+    // whose file service could not be reached (e.g. X1 / H2 / X2, m_ftps_fallback): browse the storage over FTPS instead
+    bool use_lan_ftps() const { return m_lan_mode && (!m_local_proto || m_ftps_fallback) && !m_lan_ip.empty() && !m_lan_passwd.empty(); }
     // a P1 / A1 that sent no MQTT report for a while (e.g. while a print starts) does not answer FTPS either
     bool printer_silent() const { return std::chrono::system_clock::now() - m_last_report > std::chrono::seconds(20); }
 
@@ -118,6 +118,7 @@ private:
     bool        m_device_busy  = false;
     bool        m_waiting_enable = false;
     bool        m_waiting_support = false;
+    bool        m_ftps_fallback = false; // the plug-in's file service failed on this LAN printer, FTPS is used until the printer changes
     std::chrono::system_clock::time_point m_last_report; // last MQTT report of the printer
 
     int m_last_mode = 0;
