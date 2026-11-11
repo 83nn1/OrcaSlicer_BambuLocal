@@ -100,6 +100,12 @@ static std::vector<std::string> lan_project_files(const MachineObject *obj)
     return unique;
 }
 
+bool PartSkipDialog::use_lan_ftps(const MachineObject *obj) const
+{
+    return obj && (obj->is_lan_ftps_storage() ||
+                   (m_lan_ftps_fallback && obj->is_lan_mode_printer() && !obj->get_dev_ip().empty() && !obj->get_access_code().empty()));
+}
+
 extern wxString hide_passwd(wxString url, std::vector<wxString> const &passwords);
 extern void     refresh_agora_url(char const *device, char const *dev_ver, char const *channel, void *context, void (*callback)(void *context, char const *url));
 
@@ -471,7 +477,7 @@ void PartSkipDialog::DownloadPartsFile()
 
     // a LAN only printer has no job id to tell its jobs apart, always read them again
     // (the FTPS tunnel keeps a cache of the job file itself)
-    bool lan_ftps = m_obj && m_obj->is_lan_ftps_storage();
+    bool lan_ftps = use_lan_ftps(m_obj);
     if (lan_ftps || !is_local_file_existed(m_local_paths)) {
         if (!m_file_sys) {
             m_file_sys = boost::make_shared<PrinterFileSystem>();
@@ -509,8 +515,8 @@ void PartSkipDialog::fetchUrl(boost::weak_ptr<PrinterFileSystem> wfs)
     NetworkAgent *agent         = wxGetApp().getAgent();
     std::string   agent_version = agent ? agent->get_version() : "";
 
-    if (obj->is_lan_ftps_storage()) {
-        // no local file service: the job's files come from its 3mf, read over FTPS
+    if (use_lan_ftps(obj)) {
+        // no (reachable) local file service: the job's files come from its 3mf, read over FTPS
         fs->SetUrl(LanFtps::make_url(obj->get_dev_ip(), "bblp", obj->get_access_code()));
         return;
     }
@@ -580,12 +586,21 @@ void PartSkipDialog::OnFileSystemEvent(wxCommandEvent &e)
     case PrinterFileSystem::Connecting: break;
     case PrinterFileSystem::ListSyncing: {
         std::vector<std::string> project_files;
-        if (m_obj && m_obj->is_lan_ftps_storage()) project_files = lan_project_files(m_obj);
+        if (use_lan_ftps(m_obj)) project_files = lan_project_files(m_obj);
         m_file_sys->GetPickImages(m_local_paths, m_target_paths, project_files);
         break;
     }
     case PrinterFileSystem::Failed: {
         m_file_sys->Stop();
+        if (!m_lan_ftps_fallback && m_obj && m_obj->is_lan_mode_printer() && !m_obj->is_lan_ftps_storage()) {
+            // every Bambu printer in LAN mode serves its storage over FTPS as well
+            m_lan_ftps_fallback = true;
+            if (use_lan_ftps(m_obj)) {
+                m_file_sys->Retry();
+                BOOST_LOG_TRIVIAL(info) << "part skip: file service of the printer failed, falling back to FTPS.";
+                break;
+            }
+        }
         if (m_url_state == URL_TCP) {
             m_url_state = URL_TUTK;
             m_file_sys->SetUrl("3");

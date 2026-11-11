@@ -360,6 +360,7 @@ void MediaFilePanel::UpdateByObj(MachineObject* obj)
     }
     m_machine.swap(machine);
     m_last_errors.clear();
+    m_ftps_fallback = false;
     auto fs = m_image_grid->GetFileSystem();
     if (fs) {
         m_image_grid->SetFileSystem(nullptr);
@@ -419,7 +420,21 @@ void MediaFilePanel::UpdateByObj(MachineObject* obj)
             switch (status) {
             case PrinterFileSystem::Initializing: icon = m_bmp_loading; msg = _L("Initializing..."); break;
             case PrinterFileSystem::Connecting: icon = m_bmp_loading; msg = _L("Connecting..."); break;
-            case PrinterFileSystem::Failed: icon = m_bmp_failed; if (extra != 1) msg = _L("Please check the network and try again. You can restart or update the printer if the issue persists."); break;
+            case PrinterFileSystem::Failed:
+                // Every Bambu printer in LAN mode serves its storage over FTPS as well: when the plug-in's
+                // file service of an X1 / H2 / X2 cannot be reached, try FTPS before reporting the failure
+                if (extra != 1 && extra != PrinterFileSystem::ERROR_RES_BUSY && !use_lan_ftps() && m_lan_mode && m_local_proto &&
+                    !m_lan_ip.empty() && !m_lan_passwd.empty()) {
+                    BOOST_LOG_TRIVIAL(info) << "MediaFilePanel: file service of the printer failed (" << extra << "), falling back to FTPS";
+                    m_ftps_fallback = true;
+                    m_model_download_support = true;
+                    m_image_grid->SetStatus(m_bmp_loading, _L("Connecting..."));
+                    fs->Retry();
+                    return;
+                }
+                icon = m_bmp_failed;
+                if (extra != 1) msg = _L("Please check the network and try again. You can restart or update the printer if the issue persists.");
+                break;
             case PrinterFileSystem::ListSyncing: {
                 icon = m_bmp_loading;
                 msg  = _L("Loading file list...");
