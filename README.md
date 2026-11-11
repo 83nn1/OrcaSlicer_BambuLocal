@@ -43,7 +43,7 @@ Drucker im Cloud-Modus verhalten sich wie im Original-OrcaSlicer. Abgesehen von 
 
 ## Download
 
-Der letzte gültige Build steht unter [Releases](https://github.com/83nn1/OrcaSlicer_BambuLocal/releases/latest), aktuell **V0.7.2** auf Basis von OrcaSlicer 2.5.0. Welche Version installiert ist, zeigen das Startfenster und *Hilfe → Über*. Direkt herunterladen:
+Der letzte gültige Build steht unter [Releases](https://github.com/83nn1/OrcaSlicer_BambuLocal/releases/latest), aktuell **V0.9.1** auf Basis von OrcaSlicer 2.5.0. Welche Version installiert ist, zeigen das Startfenster und *Hilfe → Über*. Direkt herunterladen:
 
 | Windows | Installer | Portable |
 |---|---|---|
