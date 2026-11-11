@@ -11,7 +11,11 @@ Was getestet wurde, gegen einen nachgebauten Drucker-FTPS-Server und am echten B
 | Von der SD-Karte drucken | | Druck startet (mit `sdcard/`-Präfix) |
 | Hochladen auf die SD-Karte | 5 MB, 60 MB, leere Datei byteidentisch; Abbrechen, falsche MD5, ins Stocken geratener Upload hinterlassen keine Datei; ungültiger Name | funktioniert |
 | Objekte überspringen | Suche der Druckdatei, Vorschaubild > 256 KB in Blöcken, MD5, Platten-Fallback, fehlende Datei | Drucker bestätigt `skip_objects`, meldet übersprungene Objekte in `s_obj` |
-| Benachrichtigung bei Druckende, Abbruch, Pause | | noch nicht getestet (V0.8.1) |
+| Benachrichtigung bei Druckende, Abbruch, Pause | | noch nicht getestet (V0.11.1) |
+
+## Andere Modelle
+
+X1C, X2D und H2C sind nicht an echter Hardware getestet, auch nicht der FTPS-Ausweichweg für Drucker mit eigenem Dateidienst (V0.10.1, siehe [Druckermodelle](Druckermodelle)).
 
 ## Bekannte Eigenheiten des P1S
 

@@ -4,6 +4,7 @@
 - [Speicher-Tab](Speicher-Tab)
 - [Objekte überspringen](Objekte-überspringen)
 - [Automatisch verbinden](Automatisch-verbinden)
+- [Druckermodelle](Druckermodelle)
 - [Benachrichtigungen](Benachrichtigungen)
 
 **Weiteres**

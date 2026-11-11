@@ -370,7 +370,8 @@ jobs:
           fi
 
       - name: Create DMG without notary
-        if: github.ref != 'refs/heads/main' && runner.os == 'macOS' && inputs.macos-combine-only
+        # Orca BambuLocal: forks can't notarize, so main gets the unsigned DMG too
+        if: (github.ref != 'refs/heads/main' || github.repository != 'OrcaSlicer/OrcaSlicer') && runner.os == 'macOS' && inputs.macos-combine-only
         working-directory: ${{ github.workspace }}
         run: |
           # Load the `retry` and `create_dmg` helpers.

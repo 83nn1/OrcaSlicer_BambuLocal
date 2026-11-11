@@ -1,6 +1,6 @@
 name: BambuLocal release
 
-# Publishes the Windows builds of a finished "Build all" run on main as a
+# Publishes the Windows, macOS and Linux builds of a finished "Build all" run on main as a
 # GitHub release of this fork, so they can be downloaded without a GitHub
 # login and don't expire like workflow artifacts.
 #
@@ -63,9 +63,10 @@ jobs:
           fi
           echo "SHA=$sha" >> "$GITHUB_ENV"
 
-      - name: Download Windows artifacts
+      - name: Download Windows, macOS and Linux artifacts
         run: |
-          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --dir artifacts -p 'OrcaSlicer_Windows_V*'
+          gh run download "$RUN_ID" --repo "$GITHUB_REPOSITORY" --dir artifacts \
+            -p 'OrcaSlicer_Windows_V*' -p 'OrcaSlicer_Mac_universal_V*' -p 'OrcaSlicer_Linux_ubuntu_*'
           ls -1 artifacts
 
       - name: Assemble assets
@@ -82,10 +83,26 @@ jobs:
             cp -v "$installer" "upload/OrcaSlicer_BambuLocal_Windows_${arch}_Installer.exe"
             ( cd "$portable" && zip -qr "$GITHUB_WORKSPACE/upload/OrcaSlicer_BambuLocal_Windows_${arch}_portable.zip" . )
           done
+          dmg=$(find artifacts -type f -name 'OrcaSlicer_Mac_universal_V*.dmg' | head -n1)
+          if [ -z "$dmg" ]; then
+            echo "::error::macOS artifact missing (expired?)."
+            exit 1
+          fi
+          cp -v "$dmg" upload/OrcaSlicer_BambuLocal_macOS_universal.dmg
+          # x86_64 keeps upstream's unsuffixed name, aarch64 has the _aarch64 suffix
+          for arch in x86_64 aarch64; do
+            if [ "$arch" = aarch64 ]; then pattern='*_aarch64_V*.AppImage'; else pattern='*_Ubuntu2404_V*.AppImage'; fi
+            appimage=$(find artifacts -type f -path '*OrcaSlicer_Linux_ubuntu_*' -name "$pattern" | head -n1)
+            if [ -z "$appimage" ]; then
+              echo "::error::Linux $arch artifact missing (expired?)."
+              exit 1
+            fi
+            cp -v "$appimage" "upload/OrcaSlicer_BambuLocal_Linux_${arch}.AppImage"
+          done
           ls -lh upload
 
       - name: Create release
         run: |
           gh release create "v$VERSION" upload/* --repo "$GITHUB_REPOSITORY" --target "$SHA" --latest \
             --title "V$VERSION" \
-            --notes "Windows-Build V$VERSION aus [Build all #$RUN_ID]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$RUN_ID), Stand \`${SHA:0:8}\`. Änderungen gegenüber Orca: siehe README."
+            --notes "Builds für Windows, macOS und Linux V$VERSION aus [Build all #$RUN_ID]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$RUN_ID), Stand \`${SHA:0:8}\`. Änderungen gegenüber Orca: siehe README."
