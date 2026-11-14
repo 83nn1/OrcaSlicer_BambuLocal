@@ -716,6 +716,9 @@ void AppConfig::set_defaults()
     if (get("auto_connect_last_printer").empty())
         set_bool("auto_connect_last_printer", true);
 
+    if (get("notify_print_state").empty())
+        set_bool("notify_print_state", true);
+
 #ifdef __linux__
     if (get("window_buttons_on_left").empty())
         set_bool("window_buttons_on_left", false);

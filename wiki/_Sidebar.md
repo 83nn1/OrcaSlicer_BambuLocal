@@ -5,6 +5,7 @@
 - [Objekte überspringen](Objekte-überspringen)
 - [Automatisch verbinden](Automatisch-verbinden)
 - [Druckermodelle](Druckermodelle)
+- [Benachrichtigungen](Benachrichtigungen)
 
 **Weiteres**
 - [Teststand](Teststand)
