@@ -3,6 +3,10 @@
 #include "wxExtensions.hpp"
 #include "Widgets/Label.hpp"
 #include "I18N.hpp"
+#include "format.hpp"
+#include "Printer/LanPrintHistory.hpp"
+#include "libslic3r/Utils.hpp"
+#include <wx/datetime.h>
 #include "GUI_App.hpp"
 #include "GUI.hpp"
 
@@ -705,6 +709,7 @@ void Slic3r::GUI::ImageGrid::renderContent2(wxDC &dc, wxPoint const &pt, int ind
     dc.SetPen(StateColor::darkModeColorFor(0xEEEEEE));
     dc.DrawRectangle(pt, m_content_rect.GetSize()); // Fix translucent model thumbnail
     renderContent1(dc, pt, index, hit);
+    renderLastPrint(dc, pt, file.name);
     m_content_rect.SetHeight(m_content_rect.GetHeight() + h);
     // Draw info bar
     dc.SetBrush(StateColor::darkModeColorFor(*wxWHITE));
@@ -726,6 +731,47 @@ void Slic3r::GUI::ImageGrid::renderContent2(wxDC &dc, wxPoint const &pt, int ind
     renderIconText(dc, m_model_time_icon, file.Metadata("Time", "0m"), rect);
     rect.Offset(m_content_rect.GetWidth() / 2, 0);
     renderIconText(dc, m_model_weight_icon, file.Metadata("Weight", "0g"), rect);
+}
+
+// BambuLocal: badge with the last print of the file from the local print history
+void Slic3r::GUI::ImageGrid::renderLastPrint(wxDC &dc, wxPoint const &pt, std::string const &file_name)
+{
+    if (m_dev_id.empty())
+        return;
+    auto print = LanPrintHistory::last_print(m_dev_id, file_name);
+    if (!print)
+        return;
+    wxString date = wxDateTime(print->end).Format("%x %H:%M");
+    wxString text;
+    if (!print->finished)
+        // TRN %1% is the date and time the print was cancelled or failed
+        text = format_wxstr(_L("Stopped %1%"), date);
+    else if (print->start > 0 && print->end > print->start)
+        // TRN %1% is the date and time the print finished, %2% how long it took, e.g. "2h15m"
+        text = format_wxstr(_L("Printed %1%, took %2%"), date, short_time(get_time_dhms(float(print->end - print->start))));
+    else
+        // TRN %1% is the date and time the print finished
+        text = format_wxstr(_L("Printed %1%"), date);
+
+    auto em   = em_unit(this);
+    auto font = dc.GetFont();
+    dc.SetFont(Label::Body_12);
+    wxSize  size = dc.GetTextExtent(text);
+    int     left = m_selecting ? em * 4 : em; // keep clear of the selection check box
+    int     max_width = m_content_rect.GetWidth() - left - em;
+    wxRect  rect{pt.x + left, pt.y + em, std::min(size.GetWidth() + em, max_width), size.GetHeight() + em / 2};
+    wxColour background = print->finished ? wxColour("#00AE42") : wxColour("#E14747");
+    auto     brush      = dc.GetBrush();
+    auto     pen        = dc.GetPen();
+    dc.SetBrush(background);
+    dc.SetPen(background);
+    dc.DrawRoundedRectangle(rect, em / 2);
+    dc.SetBrush(brush);
+    dc.SetPen(pen);
+    dc.SetTextForeground(*wxWHITE);
+    rect.Deflate(em / 2, 0);
+    renderText2(dc, text, rect);
+    dc.SetFont(font);
 }
 
 void Slic3r::GUI::ImageGrid::renderButtons(wxDC &dc, wxArrayString const &texts, wxRect const &rect2, size_t hit, int states)
