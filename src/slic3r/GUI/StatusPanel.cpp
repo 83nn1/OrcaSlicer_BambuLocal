@@ -22,6 +22,8 @@
 #include <cstddef>
 #include <ctime>
 #include "slic3r/GUI/DeviceManager.hpp"
+#include "slic3r/GUI/Monitor.hpp"
+#include "slic3r/GUI/Printer/LanPrintHistory.hpp"
 #include "slic3r/GUI/DeviceCore/DevExtruderSystem.h"
 #include "slic3r/GUI/Widgets/ProgressBar.hpp"
 #include "libslic3r/calib.hpp"
@@ -697,6 +699,12 @@ void PrintingTaskPanel::create_panel(wxWindow* parent)
     m_button_partskip->Bind(wxEVT_ENTER_WINDOW, [this](auto &e) { m_button_partskip->SetIcon("print_control_partskip_hover"); });
     m_button_partskip->Bind(wxEVT_LEAVE_WINDOW, [this](auto &e) { m_button_partskip->SetIcon("print_control_partskip"); });
 
+    // BambuLocal: start the job that just ended again from the printer's storage
+    m_button_print_again = new Button(progress_lr_panel, _L("Print again"));
+    m_button_print_again->SetStyle(ButtonStyle::Confirm, ButtonType::Window);
+    m_button_print_again->SetToolTip(_L("Open this job's file in the Storage tab and print it again."));
+    m_button_print_again->Hide();
+
     m_button_pause_resume = new ScalableButton(progress_lr_panel, wxID_ANY, "print_control_pause", wxEmptyString, wxDefaultSize, wxDefaultPosition, wxBU_EXACTFIT | wxNO_BORDER,true);
 
     m_button_pause_resume->Bind(wxEVT_ENTER_WINDOW, [this](auto &e) {
@@ -892,6 +900,7 @@ void PrintingTaskPanel::create_panel(wxWindow* parent)
     progress_left_sizer->Add(penel_finish_time, 0, wxEXPAND |wxALL, 0);
     // progress_left_sizer->SetMaxSize(wxSize(FromDIP(600), -1));
 
+    progress_right_sizer->Add(m_button_print_again, 0, wxLEFT | wxALIGN_CENTER_VERTICAL, FromDIP(18));
     progress_right_sizer->Add(0, 0, 0, wxEXPAND | wxLEFT, FromDIP(18));
     progress_right_sizer->Add(m_button_partskip, 0, wxALL | wxALIGN_CENTER_VERTICAL, FromDIP(0));//5
     progress_right_sizer->Add(0, 0, 0, wxEXPAND | wxLEFT, FromDIP(18));
@@ -1180,6 +1189,14 @@ void PrintingTaskPanel::enable_abort_button(bool enable)
         m_button_abort->Enable(true);
         m_button_abort->SetBitmap_("print_control_stop");
     }
+}
+
+void PrintingTaskPanel::show_print_again_button(bool show)
+{
+    if (m_button_print_again->IsShown() == show)
+        return;
+    m_button_print_again->Show(show);
+    m_button_print_again->GetParent()->Layout();
 }
 
 void PrintingTaskPanel::update_subtask_name(wxString name)
@@ -2607,6 +2624,12 @@ void StatusPanel::wire_controls()
     m_project_task_panel->get_partskip_button()->Connect(wxEVT_LEFT_DOWN, wxCommandEventHandler(StatusPanel::on_subtask_partskip), NULL, this);
     m_project_task_panel->get_pause_resume_button()->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(StatusPanel::on_subtask_pause_resume), NULL, this);
     m_project_task_panel->get_abort_button()->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(StatusPanel::on_subtask_abort), NULL, this);
+    m_project_task_panel->get_print_again_button()->Bind(wxEVT_COMMAND_BUTTON_CLICKED, [this](wxCommandEvent &) {
+        if (obj == nullptr)
+            return;
+        if (auto monitor = MonitorPanel::ensure())
+            monitor->print_again(LanPrintHistory::job_file_name(obj->m_gcode_file), obj->subtask_name);
+    });
     m_project_task_panel->get_market_scoring_button()->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(StatusPanel::on_market_scoring), NULL, this);
     m_project_task_panel->get_market_retry_buttom()->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(StatusPanel::on_market_retry), NULL, this);
     m_project_task_panel->get_clean_button()->Connect(wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler(StatusPanel::on_print_error_clean), NULL, this);
@@ -3894,6 +3917,10 @@ void StatusPanel::update_subtask(MachineObject *obj)
     update_model_info();
     update_partskip_button(obj);
     update_printer_parts_options(obj);
+    // BambuLocal: after a LAN job ended, offer to print it again from the storage
+    m_project_task_panel->show_print_again_button(obj->is_lan_mode_printer() &&
+                                                  (obj->print_status == "FINISH" || obj->print_status == "FAILED") &&
+                                                  !(LanPrintHistory::job_file_name(obj->m_gcode_file).empty() && obj->subtask_name.empty()));
 
     if (obj->is_system_printing() || obj->is_in_calibration()) {
         reset_printing_values();

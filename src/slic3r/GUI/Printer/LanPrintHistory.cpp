@@ -34,15 +34,6 @@ bool is_running(std::string const &state) { return state == "PREPARE" || state =
 
 fs::path history_path() { return fs::path(data_dir()) / "print_history.json"; }
 
-// storage file name of the job: the base name of gcode_file when it is a project file
-std::string job_file_name(std::string const &gcode_file)
-{
-    if (!boost::algorithm::iends_with(gcode_file, ".3mf"))
-        return {};
-    size_t slash = gcode_file.find_last_of("/\\");
-    return slash == std::string::npos ? gcode_file : gcode_file.substr(slash + 1);
-}
-
 struct History
 {
     bool                          loaded = false;
@@ -110,6 +101,22 @@ History &history()
 
 } // namespace
 
+std::string job_file_name(std::string const &gcode_file)
+{
+    if (!boost::algorithm::iends_with(gcode_file, ".3mf"))
+        return {};
+    size_t slash = gcode_file.find_last_of("/\\");
+    return slash == std::string::npos ? gcode_file : gcode_file.substr(slash + 1);
+}
+
+bool is_job_file(std::string const &file_name, std::string const &job_file, std::string const &subtask)
+{
+    if (!job_file.empty())
+        return boost::algorithm::iequals(job_file, file_name);
+    return !subtask.empty() && (boost::algorithm::iequals(subtask + ".gcode.3mf", file_name) ||
+                                boost::algorithm::iequals(subtask + ".3mf", file_name));
+}
+
 void on_print_state(std::string const &dev_id, std::string const &from, std::string const &to,
                     std::string const &gcode_file, std::string const &subtask)
 {
@@ -153,9 +160,7 @@ std::optional<Print> last_print(std::string const &dev_id, std::string const &fi
     for (auto it = h.prints.rbegin(); it != h.prints.rend(); ++it) {
         if (it->dev_id != dev_id)
             continue;
-        if (!it->file.empty() ? boost::algorithm::iequals(it->file, file_name) :
-                                (boost::algorithm::iequals(it->subtask + ".gcode.3mf", file_name) ||
-                                 boost::algorithm::iequals(it->subtask + ".3mf", file_name)))
+        if (is_job_file(file_name, it->file, it->subtask))
             return *it;
     }
     return std::nullopt;

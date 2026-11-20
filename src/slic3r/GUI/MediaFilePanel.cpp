@@ -1,5 +1,7 @@
 #include "MediaFilePanel.h"
 #include "Printer/LanFtpsTunnel.hpp"
+#include "Printer/LanPrintHistory.hpp"
+#include "format.hpp"
 #include "ImageGrid.h"
 #include "I18N.hpp"
 #include "GUI_App.hpp"
@@ -402,6 +404,7 @@ void MediaFilePanel::UpdateByObj(MachineObject* obj)
             if (m_upload_listing)
                 closeUploadDialog();
             updateUploadButton();
+            printAgainIfListed();
         });
         fs->Bind(EVT_SELECT_CHANGED, [this, wfs = boost::weak_ptr(fs)](auto &e) {
             e.Skip();
@@ -772,6 +775,41 @@ void MediaFilePanel::closeUploadDialog()
         m_upload_dlg->Destroy();
         m_upload_dlg = nullptr;
     }
+}
+
+void MediaFilePanel::PrintAgain(std::string const &job_file, std::string const &subtask)
+{
+    if (m_last_type != PrinterFileSystem::F_MODEL) {
+        // as a click on "Models": switches the list, which is then loaded again
+        wxCommandEvent e(wxEVT_COMMAND_BUTTON_CLICKED, m_button_model->GetId());
+        e.SetEventObject(m_button_model);
+        m_button_model->GetEventHandler()->ProcessEvent(e);
+    }
+    m_print_again_file    = job_file;
+    m_print_again_subtask = subtask;
+    printAgainIfListed();
+}
+
+void MediaFilePanel::printAgainIfListed()
+{
+    auto fs = m_image_grid->GetFileSystem();
+    if ((m_print_again_file.empty() && m_print_again_subtask.empty()) || fs == nullptr ||
+        fs->GetFileType() != PrinterFileSystem::F_MODEL || fs->GetStatus() != PrinterFileSystem::ListReady)
+        return;
+    std::string job_file, subtask;
+    job_file.swap(m_print_again_file);
+    subtask.swap(m_print_again_subtask);
+    for (size_t i = 0; i < fs->GetCount(); ++i) {
+        if (LanPrintHistory::is_job_file(fs->GetFile(i).name, job_file, subtask)) {
+            CallAfter([this, i] { doAction(i, 1); });
+            return;
+        }
+    }
+    BOOST_LOG_TRIVIAL(info) << "MediaFilePanel: print again: " << (job_file.empty() ? subtask : job_file) << " not on the storage";
+    // TRN %1% is a file or job name
+    MessageDialog(this, format_wxstr(_L("\"%1%\" was not found on the printer's storage."), from_u8(job_file.empty() ? subtask : job_file)),
+                  _L("Print again"), wxOK | wxICON_WARNING)
+        .ShowModal();
 }
 
 void MediaFilePanel::doAction(size_t index, int action)

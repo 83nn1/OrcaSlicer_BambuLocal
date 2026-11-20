@@ -326,6 +326,7 @@ private:
     ScalableButton* m_button_pause_resume;
     ScalableButton* m_button_abort;
     Button*         m_button_partskip;
+    Button*         m_button_print_again{nullptr};
     Button*         m_button_market_scoring;
     Button*         m_button_clean;
     Button *                      m_button_market_retry;
@@ -361,6 +362,7 @@ public:
     void enable_partskip_button(MachineObject* obj, bool enable);
     void enable_pause_resume_button(bool enable, std::string type);
     void enable_abort_button(bool enable);
+    void show_print_again_button(bool show);
     void update_subtask_name(wxString name);
     void update_stage_value(wxString stage, int val);
     void update_stage_value_with_machine(wxString stage, int val, MachineObject* obj = nullptr);
@@ -385,6 +387,7 @@ public:
     ScalableButton* get_abort_button() {return m_button_abort;};
     ScalableButton* get_pause_resume_button() {return m_button_pause_resume;};
     Button* get_partskip_button() { return m_button_partskip; };
+    Button* get_print_again_button() { return m_button_print_again; };
     Button* get_market_scoring_button() {return m_button_market_scoring;};
     Button * get_market_retry_buttom() { return m_button_market_retry; };
     Button* get_clean_button() {return m_button_clean;};

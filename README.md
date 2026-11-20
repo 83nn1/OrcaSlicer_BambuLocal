@@ -28,7 +28,7 @@ Dieser Fork holt sie in den LAN-Only-Modus zurück. Er spricht dafür direkt mit
 | Objekte während des Drucks überspringen | ❌ | ✅ |
 | Beim Start automatisch mit dem letzten Drucker verbinden (abschaltbar) | ⚠️¹ | ✅ |
 | Desktop-Benachrichtigung, wenn ein Druck fertig ist, abbricht oder pausiert (abschaltbar) | ❌ | ✅ |
-| Druckhistorie: im Speicher-Tab steht, wann eine Datei zuletzt gedruckt wurde, wie lange es gedauert hat und ob es geklappt hat; Sortierung „Zuletzt gedruckte zuerst“ zum Nochmaldrucken | ❌ | ✅ |
+| Druckhistorie: im Speicher-Tab steht, wann eine Datei zuletzt gedruckt wurde, wie lange es gedauert hat und ob es geklappt hat; Sortierung „Zuletzt gedruckte zuerst“ und Knopf „Nochmal drucken“ im Gerät-Tab | ❌ | ✅ |
 | Bambu-Handy-App, Zugriff von unterwegs | ❌ | ❌ |
 
 ¹ Seit OrcaSlicer 2.5.0 verbindet sich auch das Original beim Start wieder, aber ohne Einstellung und mit einem LAN-Drucker nur, wenn es ihn beim Start schon im Netzwerk gefunden hat. Der Fork verbindet, sobald sich der Drucker meldet, und lässt sich abschalten.
