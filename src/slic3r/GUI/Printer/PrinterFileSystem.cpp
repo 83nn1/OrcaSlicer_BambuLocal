@@ -283,7 +283,7 @@ void PrinterFileSystem::SortFiles(FileList &list) const
     std::map<std::string, time_t> printed;
     if (m_sort_mode == S_PRINTED_DESC)
         for (auto &file : list) {
-            auto print = LanPrintHistory::last_print(m_dev_id, file.name);
+            auto print = Slic3r::LanPrintHistory::last_print(m_dev_id, file.name);
             printed.emplace(file.path + '\n' + file.name, print ? print->end : 0);
         }
     std::stable_sort(list.begin(), list.end(), [this, &by_name, &printed](File const &l, File const &r) {
