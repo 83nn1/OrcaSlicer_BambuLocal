@@ -6,6 +6,7 @@
 - [Automatisch verbinden](Automatisch-verbinden)
 - [Druckermodelle](Druckermodelle)
 - [Benachrichtigungen](Benachrichtigungen)
+- [Druckhistorie](Druckhistorie)
 
 **Weiteres**
 - [Teststand](Teststand)

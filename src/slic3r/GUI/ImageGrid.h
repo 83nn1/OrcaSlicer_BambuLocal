@@ -58,6 +58,9 @@ public:
 
     bool IsSelecting() { return m_selecting; }
 
+    // printer whose files are shown, to look up their last print in the local print history
+    void SetDeviceId(std::string const &dev_id) { m_dev_id = dev_id; }
+
     void DoActionOnSelection(int action);
 
     void ShowDownload(bool show);
@@ -106,6 +109,8 @@ protected:
 
     void renderIconText(wxDC &dc, ScalableBitmap const & icon, wxString text, wxRect const &rect);
 
+    void renderLastPrint(wxDC &dc, wxPoint const &pt, std::string const &file_name);
+
     // some useful events
     void mouseMoved(wxMouseEvent& event);
     void mouseWheelMoved(wxMouseEvent& event);
@@ -119,6 +124,7 @@ protected:
 
 private:
     boost::shared_ptr<PrinterFileSystem> m_file_sys;
+    std::string m_dev_id;
     ScalableBitmap m_status_icon;
     wxString m_status_msg;
 

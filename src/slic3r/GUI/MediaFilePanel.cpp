@@ -359,6 +359,7 @@ void MediaFilePanel::UpdateByObj(MachineObject* obj)
         return;
     }
     m_machine.swap(machine);
+    m_image_grid->SetDeviceId(m_machine);
     m_last_errors.clear();
     m_ftps_fallback = false;
     auto fs = m_image_grid->GetFileSystem();

@@ -28,6 +28,7 @@ Dieser Fork holt sie in den LAN-Only-Modus zurück. Er spricht dafür direkt mit
 | Objekte während des Drucks überspringen | ❌ | ✅ |
 | Beim Start automatisch mit dem letzten Drucker verbinden (abschaltbar) | ⚠️¹ | ✅ |
 | Desktop-Benachrichtigung, wenn ein Druck fertig ist, abbricht oder pausiert (abschaltbar) | ❌ | ✅ |
+| Druckhistorie: im Speicher-Tab steht, wann eine Datei zuletzt gedruckt wurde, wie lange es gedauert hat und ob es geklappt hat | ❌ | ✅ |
 | Bambu-Handy-App, Zugriff von unterwegs | ❌ | ❌ |
 
 ¹ Seit OrcaSlicer 2.5.0 verbindet sich auch das Original beim Start wieder, aber ohne Einstellung und mit einem LAN-Drucker nur, wenn es ihn beim Start schon im Netzwerk gefunden hat. Der Fork verbindet, sobald sich der Drucker meldet, und lässt sich abschalten.
@@ -75,6 +76,7 @@ Wie die einzelnen Funktionen arbeiten, was getestet ist und wie man den Fork sel
 - [Objekte überspringen](https://github.com/83nn1/OrcaSlicer_BambuLocal/wiki/Objekte-überspringen)
 - [Automatisch verbinden](https://github.com/83nn1/OrcaSlicer_BambuLocal/wiki/Automatisch-verbinden)
 - [Benachrichtigungen](https://github.com/83nn1/OrcaSlicer_BambuLocal/wiki/Benachrichtigungen)
+- [Druckhistorie](https://github.com/83nn1/OrcaSlicer_BambuLocal/wiki/Druckhistorie)
 - [Teststand](https://github.com/83nn1/OrcaSlicer_BambuLocal/wiki/Teststand)
 - [Bauen, Versionen und Releases](https://github.com/83nn1/OrcaSlicer_BambuLocal/wiki/Bauen-und-Versionen)
 

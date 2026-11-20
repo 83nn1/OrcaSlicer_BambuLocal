@@ -43,6 +43,7 @@
 #include "GUI.hpp"
 #include "libslic3r/AppConfig.hpp"
 #include <wx/notifmsg.h>
+#include "Printer/LanPrintHistory.hpp"
 #include <system_error>
 #include "libslic3r/ProjectTask.hpp"
 #include <cstring>
@@ -2716,9 +2717,11 @@ void MachineObject::set_print_state(std::string status)
     const bool changed = (print_status != status);
     const std::string previous = print_status;
     print_status = status;
-    if (changed && !previous.empty())
-        notify_print_state_change(*this, previous, print_status);
     if (changed) {
+        LanPrintHistory::on_print_state(dev_id, previous, print_status, m_gcode_file, subtask_name);
+        if (!previous.empty())
+            notify_print_state_change(*this, previous, print_status);
+
         LifecycleEventContext ctx;
         ctx.name  = dev_id;
         ctx.code  = LifecycleEvtCode::Ok;
