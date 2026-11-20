@@ -135,7 +135,9 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: |
             $deps = (Split-Path "${{ github.workspace }}/${{ inputs.cache-path }}").Replace('\', '/')
-            cmake --build $deps --config Release --target deps --parallel 1
+            $flags = if ("${{ inputs.compiler }}" -eq "clang") { "-l", "-x" } else { "--msvc", "--msbuild" }
+            # build_win.bat sets up the Visual Studio environment that nmake and cl need.
+            .\build_win.bat -d --arch ${{ inputs.arch }} --deps-dir $deps @flags -j 1
         shell: pwsh
 
       - name: Build on Mac ${{ inputs.arch }}
