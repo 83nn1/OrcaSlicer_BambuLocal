@@ -149,6 +149,8 @@ MediaFilePanel::MediaFilePanel(wxWindow * parent)
     m_sort_box->Append(_L("Oldest first"));
     m_sort_box->Append(_L("Name (A to Z)"));
     m_sort_box->Append(_L("Name (Z to A)"));
+    // TRN Sort order in the Storage tab: files printed most recently (local print history) first
+    m_sort_box->Append(_L("Last printed first"));
     m_sort_box->SetFont(Label::Body_12);
     m_sort_box->SetToolTip(_L("Sort order of the files."));
     for (auto b : {m_button_delete, m_button_download, m_button_refresh, m_button_management, m_button_select_all, m_button_upload}) {
@@ -237,7 +239,7 @@ MediaFilePanel::MediaFilePanel(wxWindow * parent)
 
     // Sort order, remembered across sessions
     int sort_mode = atoi(wxGetApp().app_config->get("media_file_sort").c_str());
-    if (sort_mode < PrinterFileSystem::S_TIME_DESC || sort_mode > PrinterFileSystem::S_NAME_DESC)
+    if (sort_mode < PrinterFileSystem::S_TIME_DESC || sort_mode > PrinterFileSystem::S_PRINTED_DESC)
         sort_mode = PrinterFileSystem::S_TIME_DESC;
     m_sort_box->SetSelection(sort_mode);
     m_sort_box->Bind(wxEVT_COMBOBOX, [this](wxCommandEvent &e) {
@@ -378,6 +380,7 @@ void MediaFilePanel::UpdateByObj(MachineObject* obj)
         m_image_grid->SetStatus(m_bmp_failed, _L("Please confirm if the printer is connected."));
     } else {
         boost::shared_ptr<PrinterFileSystem> fs(new PrinterFileSystem);
+        fs->SetDeviceId(m_machine);
         fs->SetSortMode(PrinterFileSystem::SortMode(m_sort_box->GetSelection()));
         fs->Attached();
         m_image_grid->SetFileSystem(fs);

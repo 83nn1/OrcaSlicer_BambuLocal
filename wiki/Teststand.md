@@ -13,6 +13,7 @@ Was getestet wurde, gegen einen nachgebauten Drucker-FTPS-Server und am echten B
 | Objekte überspringen | Suche der Druckdatei, Vorschaubild > 256 KB in Blöcken, MD5, Platten-Fallback, fehlende Datei | Drucker bestätigt `skip_objects`, meldet übersprungene Objekte in `s_obj` |
 | Benachrichtigung bei Druckende, Abbruch, Pause | | noch nicht getestet (V0.11.1) |
 | Druckhistorie im Speicher-Tab | | noch nicht getestet (V0.12.1) |
+| Sortierung „Zuletzt gedruckte zuerst“ | | noch nicht getestet (V0.13.1) |
 
 ## Andere Modelle
 

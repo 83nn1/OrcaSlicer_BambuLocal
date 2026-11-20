@@ -8007,6 +8007,22 @@ msgid "Sort order of the files."
 msgstr "Sortierreihenfolge der Dateien."
 
 # AI Translated
+msgid "Last printed first"
+msgstr "Zuletzt gedruckte zuerst"
+
+# AI Translated
+msgid "Stopped %1%"
+msgstr "Abgebrochen %1%"
+
+# AI Translated
+msgid "Printed %1%, took %2%"
+msgstr "Gedruckt %1%, Dauer %2%"
+
+# AI Translated
+msgid "Printed %1%"
+msgstr "Gedruckt %1%"
+
+# AI Translated
 msgid "Previews are not loaded while the printer is printing, so that the printer is not overloaded."
 msgstr "Während eines laufenden Drucks werden keine Vorschaubilder geladen, damit der Drucker nicht überlastet wird."
 
