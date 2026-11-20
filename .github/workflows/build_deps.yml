@@ -128,6 +128,16 @@ jobs:
             .\build_win.bat -d --arch ${{ inputs.arch }} --deps-dir $deps @flags
         shell: pwsh
 
+      # BambuLocal: the log API only returns a job's last lines, where a parallel build shows no
+      # error. Build serially once more so the failing dependency's error ends the log.
+      - name: Show the failing dependency (Windows)
+        if: failure() && runner.os == 'Windows'
+        working-directory: ${{ github.workspace }}
+        run: |
+            $deps = (Split-Path "${{ github.workspace }}/${{ inputs.cache-path }}").Replace('\', '/')
+            cmake --build $deps --config Release --target deps --parallel 1
+        shell: pwsh
+
       - name: Build on Mac ${{ inputs.arch }}
         if: runner.os == 'macOS'
         working-directory: ${{ github.workspace }}
