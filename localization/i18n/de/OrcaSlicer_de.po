@@ -8035,6 +8035,10 @@ msgid "Print again"
 msgstr "Nochmal drucken"
 
 # AI Translated
+msgid "Loading the file list from the printer..."
+msgstr "Die Dateiliste wird vom Drucker geladen..."
+
+# AI Translated
 msgid "Previews are not loaded while the printer is printing, so that the printer is not overloaded."
 msgstr "Während eines laufenden Drucks werden keine Vorschaubilder geladen, damit der Drucker nicht überlastet wird."
 

@@ -20,7 +20,7 @@ Dateien, die mit Orca noch nie gedruckt wurden, bleiben unverändert.
 
 ## Nochmal drucken
 
-Im **Gerät-Tab** erscheint nach dem Ende eines Drucks (fertig oder abgebrochen) neben den Druckknöpfen „Nochmal drucken“. Der Knopf wechselt in den Speicher-Tab, zeigt die Modelle, sucht die Datei des Auftrags (gleiche Zuordnung wie bei den Abzeichen) und öffnet dafür den normalen Druckdialog. Ist die Datei nicht mehr auf der SD-Karte, kommt ein Hinweis. Den Knopf gibt es nur im LAN-Modus.
+Im **Gerät-Tab** erscheint nach dem Ende eines Drucks (fertig oder abgebrochen) neben den Druckknöpfen „Nochmal drucken“. Der Knopf wechselt in den Speicher-Tab, zeigt die Modelle, sucht die Datei des Auftrags (gleiche Zuordnung wie bei den Abzeichen) und öffnet dafür den normalen Druckdialog. Solange die Dateiliste vom Drucker geladen wird, zeigt ein Fenster „Die Dateiliste wird vom Drucker geladen...“; mit „Abbrechen“ hört Orca auf zu warten. Ist die Datei nicht mehr auf der SD-Karte, kommt ein Hinweis. Den Knopf gibt es nur im LAN-Modus.
 
 Außerdem gibt es in der Sortierauswahl des Speicher-Tabs gibt es „Zuletzt gedruckte zuerst“. Dann stehen oben die Dateien, deren Druck zuletzt zu Ende ging, danach alle nie gedruckten Dateien, neueste zuerst. Mit dem „Drucken“-Knopf auf der Karte startet man die Datei wie gewohnt erneut von der SD-Karte. Die Reihenfolge wird beim Öffnen des Speicher-Tabs und mit „Aktualisieren“ neu berechnet; ein Druck, der gerade erst geendet hat, rutscht also nach dem nächsten Aktualisieren nach oben.
 

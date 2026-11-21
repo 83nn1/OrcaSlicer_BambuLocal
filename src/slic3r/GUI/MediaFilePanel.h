@@ -71,6 +71,7 @@ private:
     void doAction(size_t index, int action);
 
     void printAgainIfListed();
+    void closePrintAgainDialog();
 
     void applySortMode(int mode);
 
@@ -132,6 +133,7 @@ private:
     std::set<int> m_last_errors;
     std::string m_print_again_file; // job to print again once the model list is loaded
     std::string m_print_again_subtask;
+    ProgressDialog *m_print_again_dlg = nullptr; // shown while the list of a job to print again loads
 };
 
 

@@ -440,6 +440,11 @@ void MediaFilePanel::UpdateByObj(MachineObject* obj)
                     return;
                 }
                 icon = m_bmp_failed;
+                if (m_print_again_dlg) { // the job to print again cannot be looked up
+                    m_print_again_file.clear();
+                    m_print_again_subtask.clear();
+                    closePrintAgainDialog();
+                }
                 if (extra != 1) msg = _L("Please check the network and try again. You can restart or update the printer if the issue persists.");
                 break;
             case PrinterFileSystem::ListSyncing: {
@@ -788,6 +793,23 @@ void MediaFilePanel::PrintAgain(std::string const &job_file, std::string const &
     m_print_again_file    = job_file;
     m_print_again_subtask = subtask;
     printAgainIfListed();
+    if (!m_print_again_dlg && !(m_print_again_file.empty() && m_print_again_subtask.empty())) {
+        // reading the list from the printer can take a while
+        m_print_again_dlg = new MediaProgressDialog(_L("Print again"), this, [this] {
+            m_print_again_file.clear();
+            m_print_again_subtask.clear();
+            CallAfter([this] { closePrintAgainDialog(); });
+        });
+        m_print_again_dlg->Update(0, _L("Loading the file list from the printer..."));
+    }
+}
+
+void MediaFilePanel::closePrintAgainDialog()
+{
+    if (m_print_again_dlg) {
+        m_print_again_dlg->Destroy();
+        m_print_again_dlg = nullptr;
+    }
 }
 
 void MediaFilePanel::printAgainIfListed()
@@ -799,6 +821,8 @@ void MediaFilePanel::printAgainIfListed()
     std::string job_file, subtask;
     job_file.swap(m_print_again_file);
     subtask.swap(m_print_again_subtask);
+    // the print action shows its own progress while it fetches the model
+    closePrintAgainDialog();
     for (size_t i = 0; i < fs->GetCount(); ++i) {
         if (LanPrintHistory::is_job_file(fs->GetFile(i).name, job_file, subtask)) {
             CallAfter([this, i] { doAction(i, 1); });
