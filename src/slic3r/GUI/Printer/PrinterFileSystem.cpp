@@ -667,6 +667,9 @@ void PrinterFileSystem::FetchModel(size_t index, std::function<void(int, std::st
     }
     req["paths"] = arr;
     req["zip"] = true;
+    // The user waits for this one: LanFtpsTunnel answers it before the queued previews
+    if (m_session.lan_ftps)
+        req["first"] = true;
     m_task_flags |= FF_FETCH_MODEL;
     std::shared_ptr<std::string> file_data(new std::string());
     m_fetch_model_seq = SendRequest<Void>(
