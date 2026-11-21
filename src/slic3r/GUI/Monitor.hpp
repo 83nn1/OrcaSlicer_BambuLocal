@@ -127,6 +127,8 @@ public:
     void msw_rescale();
 
     StatusPanel* get_status_panel() {return m_status_info_panel;};
+    // Opens the Storage tab and the print dialog for that job (see MediaFilePanel::PrintAgain).
+    void print_again(std::string const &job_file, std::string const &subtask);
 	void select_machine(std::string machine_sn);
     // Resets the selected printer's calibration results and syncs the sidebar, without the Device tab.
     static void on_machine_selected(MachineObject* obj);

@@ -13,10 +13,16 @@ Orca merkt sich jeden Druck, dessen Ende es mitbekommt, mit der Uhr des PCs:
 
 Im **Speicher-Tab** steht dann oben auf dem Vorschaubild der Datei ein Hinweis zum letzten Druck:
 
-- grün „Printed 14.11.2026 17:30, took 2h15m“, wenn er fertig wurde (die Dauer nur, wenn Orca auch den Start gesehen hat),
-- rot „Stopped 14.11.2026 17:30“, wenn er abgebrochen wurde oder fehlgeschlagen ist.
+- grün „Gedruckt 14.11.2026 17:30, Dauer 2h15m“, wenn er fertig wurde (die Dauer nur, wenn Orca auch den Start gesehen hat),
+- rot „Abgebrochen 14.11.2026 17:30“, wenn er abgebrochen wurde oder fehlgeschlagen ist.
 
 Dateien, die mit Orca noch nie gedruckt wurden, bleiben unverändert.
+
+## Nochmal drucken
+
+Im **Gerät-Tab** erscheint nach dem Ende eines Drucks (fertig oder abgebrochen) neben den Druckknöpfen „Nochmal drucken“. Der Knopf wechselt in den Speicher-Tab, zeigt die Modelle, sucht die Datei des Auftrags (gleiche Zuordnung wie bei den Abzeichen) und öffnet dafür den normalen Druckdialog. Ist die Datei nicht mehr auf der SD-Karte, kommt ein Hinweis. Den Knopf gibt es nur im LAN-Modus.
+
+Außerdem gibt es in der Sortierauswahl des Speicher-Tabs gibt es „Zuletzt gedruckte zuerst“. Dann stehen oben die Dateien, deren Druck zuletzt zu Ende ging, danach alle nie gedruckten Dateien, neueste zuerst. Mit dem „Drucken“-Knopf auf der Karte startet man die Datei wie gewohnt erneut von der SD-Karte. Die Reihenfolge wird beim Öffnen des Speicher-Tabs und mit „Aktualisieren“ neu berechnet; ein Druck, der gerade erst geendet hat, rutscht also nach dem nächsten Aktualisieren nach oben.
 
 Die Liste liegt in `print_history.json` im Datenordner von Orca (unter Windows `%APPDATA%\OrcaSlicer`) und hält die letzten 2000 Drucke. Sie gilt pro Drucker. Ist Orca beim Druckende geschlossen oder die Verbindung getrennt, fehlt der Druck in der Liste.
 

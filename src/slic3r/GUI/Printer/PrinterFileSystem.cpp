@@ -30,6 +30,8 @@
 #include <map>
 #include "slic3r/GUI/Printer/BambuTunnel.h"
 #include "slic3r/GUI/Printer/LanFtpsTunnel.hpp"
+#include "slic3r/GUI/Printer/LanPrintHistory.hpp"
+#include <optional>
 #include <vector>
 #include <cassert>
 #include <utility>
@@ -277,8 +279,21 @@ void PrinterFileSystem::SortFiles(FileList &list) const
     auto by_name = [&keys](File const &l, File const &r) {
         return natural_compare(keys[l.path + '\n' + l.name], keys[r.path + '\n' + r.name]);
     };
-    std::stable_sort(list.begin(), list.end(), [this, &by_name](File const &l, File const &r) {
+    // end of the last recorded print per file, looked up once instead of in every comparison
+    std::map<std::string, time_t> printed;
+    if (m_sort_mode == S_PRINTED_DESC)
+        for (auto &file : list) {
+            auto print = Slic3r::LanPrintHistory::last_print(m_dev_id, file.name);
+            printed.emplace(file.path + '\n' + file.name, print ? print->end : 0);
+        }
+    std::stable_sort(list.begin(), list.end(), [this, &by_name, &printed](File const &l, File const &r) {
         switch (m_sort_mode) {
+        case S_PRINTED_DESC: {
+            time_t pl = printed[l.path + '\n' + l.name], pr = printed[r.path + '\n' + r.name];
+            if (pl != pr)
+                return pl > pr;
+            return l.time != r.time ? l.time > r.time : by_name(l, r) < 0;
+        }
         case S_TIME_ASC: return l.time != r.time ? l.time < r.time : by_name(l, r) < 0;
         case S_NAME_ASC: return by_name(l, r) < 0;
         case S_NAME_DESC: return by_name(l, r) > 0;
@@ -652,6 +667,9 @@ void PrinterFileSystem::FetchModel(size_t index, std::function<void(int, std::st
     }
     req["paths"] = arr;
     req["zip"] = true;
+    // The user waits for this one: LanFtpsTunnel answers it before the queued previews
+    if (m_session.lan_ftps)
+        req["first"] = true;
     m_task_flags |= FF_FETCH_MODEL;
     std::shared_ptr<std::string> file_data(new std::string());
     m_fetch_model_seq = SendRequest<Void>(

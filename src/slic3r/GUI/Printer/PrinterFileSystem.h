@@ -110,11 +110,15 @@ public:
         S_TIME_ASC,
         S_NAME_ASC,
         S_NAME_DESC,
+        S_PRINTED_DESC, // last printed first, from the local print history; then newest first
     };
 
     void SetSortMode(SortMode mode);
 
     SortMode GetSortMode() const { return m_sort_mode; }
+
+    // printer whose files are listed, to look up their prints in the local print history
+    void SetDeviceId(std::string const &dev_id) { m_dev_id = dev_id; }
 
     bool IsSortedByTime() const { return m_sort_mode == S_TIME_DESC || m_sort_mode == S_TIME_ASC; }
 
@@ -393,6 +397,7 @@ protected:
     std::string m_file_storage;
     GroupMode m_group_mode = G_NONE;
     SortMode m_sort_mode = S_TIME_DESC;
+    std::string m_dev_id;
     FileList m_file_list;
     std::map<std::pair<FileType, std::string>, FileList> m_file_list_cache;
     std::vector<size_t> m_group_year;
