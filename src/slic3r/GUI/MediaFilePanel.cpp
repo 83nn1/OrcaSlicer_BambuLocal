@@ -355,7 +355,9 @@ void MediaFilePanel::UpdateByObj(MachineObject* obj)
 
     Enable(obj && obj->is_info_ready() && obj->m_push_count > 0);
     if (machine == m_machine && !sdcard_state_changed) {
-        if ((m_waiting_enable && IsEnabled() && !(use_lan_ftps() && printer_silent())) ||
+        // IsThisEnabled: the state set above from the printer. IsEnabled is also false while
+        // a progress dialog disables the main window, which would never connect then.
+        if ((m_waiting_enable && IsThisEnabled() && !(use_lan_ftps() && printer_silent())) ||
             (m_waiting_support && (m_local_proto || m_remote_proto))) {
             auto fs = m_image_grid->GetFileSystem();
             if (fs) fs->Retry();
@@ -632,7 +634,7 @@ void MediaFilePanel::fetchUrl(boost::weak_ptr<PrinterFileSystem> wfs)
 {
     boost::shared_ptr fs(wfs.lock());
     if (!fs || fs != m_image_grid->GetFileSystem()) return;
-    if (!IsEnabled()) {
+    if (!IsThisEnabled()) { // see UpdateByObj
         m_waiting_enable = true;
         m_image_grid->SetStatus(m_bmp_failed, _L("Please confirm if the printer is connected."));
         fs->SetUrl("0");
