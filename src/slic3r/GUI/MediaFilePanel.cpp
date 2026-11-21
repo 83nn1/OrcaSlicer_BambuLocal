@@ -440,11 +440,6 @@ void MediaFilePanel::UpdateByObj(MachineObject* obj)
                     return;
                 }
                 icon = m_bmp_failed;
-                if (m_print_again_dlg) { // the job to print again cannot be looked up
-                    m_print_again_file.clear();
-                    m_print_again_subtask.clear();
-                    closePrintAgainDialog();
-                }
                 if (extra != 1) msg = _L("Please check the network and try again. You can restart or update the printer if the issue persists.");
                 break;
             case PrinterFileSystem::ListSyncing: {
@@ -794,7 +789,8 @@ void MediaFilePanel::PrintAgain(std::string const &job_file, std::string const &
     m_print_again_subtask = subtask;
     printAgainIfListed();
     if (!m_print_again_dlg && !(m_print_again_file.empty() && m_print_again_subtask.empty())) {
-        // reading the list from the printer can take a while
+        // reading the list from the printer can take a while. It stays open over a failed
+        // connection: switching the list reports Failed before fetchUrl connects again.
         m_print_again_dlg = new MediaProgressDialog(_L("Print again"), this, [this] {
             m_print_again_file.clear();
             m_print_again_subtask.clear();
