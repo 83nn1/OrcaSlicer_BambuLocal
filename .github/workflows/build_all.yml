@@ -407,18 +407,6 @@ jobs:
     - name: Pack deps/ for the Flatpak manifest
       run: ./scripts/flatpak/make_deps_tar.sh
       shell: bash
-    # BambuLocal: updating the image's preinstalled GNOME SDK fails now and then with "Invalid
-    # cross-device link": flatpak renames directories that live in the image's lower overlay
-    # layer. Recreate each installation in the container's own layer before the build.
-    - name: Move the Flatpak installations out of the image layer
-      run: |
-        for dir in /var/lib/flatpak "$HOME/.local/share/flatpak"; do
-          [ -d "$dir" ] || continue
-          findmnt -T "$dir" || true
-          du -sh "$dir" || true
-          cp -a "$dir" "$dir.copy" && rm -rf "$dir" && cp -a "$dir.copy" "$dir" && rm -rf "$dir.copy"
-        done
-      shell: bash
     - uses: flatpak/flatpak-github-actions/flatpak-builder@master
       with:
         bundle: OrcaSlicer-Linux-flatpak_${{ env.ver }}_${{ matrix.variant.arch }}.flatpak
