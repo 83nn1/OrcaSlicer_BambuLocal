@@ -16,7 +16,7 @@ Die Dateinamen im Release sind immer gleich (`OrcaSlicer_BambuLocal_Windows_{x64
 
 ## Abgleich mit OrcaSlicer
 
-Der Fork übernimmt neue Versionen des Originals per Merge des jeweiligen Release-Tags (Remote `upstream` = `OrcaSlicer/OrcaSlicer`), ohne Force-Push. Aktuelle Basis ist OrcaSlicer 2.5.0 (V0.7.x).
+Der Fork übernimmt neue Versionen des Originals per Merge des jeweiligen Release-Tags (Remote `upstream` = `OrcaSlicer/OrcaSlicer`), ohne Force-Push. Aktuelle Basis ist OrcaSlicer 2.5.2 (V0.14.x).
 
 OrcaSlicer 2.5.0 bringt ein Python-Plugin-System. Die Funktionen dieses Forks lassen sich damit nicht als Plugin umsetzen: Plugins kommen weder an die Druckerverbindung des Geräte-Tabs noch an den Speicher-Tab oder den Dialog „Teile überspringen“, und das automatische Verbinden braucht Änderungen im Kern. Der Fork bleibt deshalb ein Fork.
 
