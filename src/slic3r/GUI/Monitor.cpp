@@ -535,6 +535,14 @@ void MonitorPanel::show_status(int status)
     //Thaw();
 }
 
+void MonitorPanel::print_again(std::string const &job_file, std::string const &subtask)
+{
+    if (m_media_file_panel == nullptr)
+        return;
+    m_tabpanel->SetSelection(PT_MEDIA);
+    m_media_file_panel->PrintAgain(job_file, subtask);
+}
+
 std::string MonitorPanel::get_string_from_tab(PrinterTab tab)
 {
     switch (tab) {

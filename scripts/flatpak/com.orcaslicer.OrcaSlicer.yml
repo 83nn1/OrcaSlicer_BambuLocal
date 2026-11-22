@@ -119,7 +119,8 @@ modules:
       # submodules (PCRE2, etc.) that are not included in GitHub tarballs.
       - type: git
         url: https://github.com/OrcaSlicer/Orca-deps-wxWidgets.git
-        branch: v3.3.2
+        # BambuLocal: pinned by commit only, like deps/wxWidgets/wxWidgets.cmake. The v3.3.2 branch
+        # moved on (89844cb1), and flatpak-builder refuses a branch whose tip is not this commit.
         commit: b44c39c100975a0ac0e46f937aa3f3eae5e18631
 
   # OrcaSlicer C++ dependencies (built offline with pre-downloaded archives)
@@ -140,7 +141,9 @@ modules:
           -DCMAKE_EXE_LINKER_FLAGS="-fuse-ld=lld" \
           -DCMAKE_SHARED_LINKER_FLAGS="-fuse-ld=lld" \
           -DCMAKE_MODULE_LINKER_FLAGS="-fuse-ld=lld"
-      - cmake --build $BUILD_DIR --parallel
+      # BambuLocal: on a failure build once more serially, so the failing dependency's error ends the
+      # log (the log API only returns a job's last lines).
+      - cmake --build $BUILD_DIR --parallel || cmake --build $BUILD_DIR --parallel 1
       - rm -rf /run/build/orca_deps/external-packages
 
       # uv runs from the app resources at runtime and CMake finds it there

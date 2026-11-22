@@ -1,5 +1,7 @@
 #include "MediaFilePanel.h"
 #include "Printer/LanFtpsTunnel.hpp"
+#include "Printer/LanPrintHistory.hpp"
+#include "format.hpp"
 #include "ImageGrid.h"
 #include "I18N.hpp"
 #include "GUI_App.hpp"
@@ -149,6 +151,8 @@ MediaFilePanel::MediaFilePanel(wxWindow * parent)
     m_sort_box->Append(_L("Oldest first"));
     m_sort_box->Append(_L("Name (A to Z)"));
     m_sort_box->Append(_L("Name (Z to A)"));
+    // TRN Sort order in the Storage tab: files printed most recently (local print history) first
+    m_sort_box->Append(_L("Last printed first"));
     m_sort_box->SetFont(Label::Body_12);
     m_sort_box->SetToolTip(_L("Sort order of the files."));
     for (auto b : {m_button_delete, m_button_download, m_button_refresh, m_button_management, m_button_select_all, m_button_upload}) {
@@ -237,7 +241,7 @@ MediaFilePanel::MediaFilePanel(wxWindow * parent)
 
     // Sort order, remembered across sessions
     int sort_mode = atoi(wxGetApp().app_config->get("media_file_sort").c_str());
-    if (sort_mode < PrinterFileSystem::S_TIME_DESC || sort_mode > PrinterFileSystem::S_NAME_DESC)
+    if (sort_mode < PrinterFileSystem::S_TIME_DESC || sort_mode > PrinterFileSystem::S_PRINTED_DESC)
         sort_mode = PrinterFileSystem::S_TIME_DESC;
     m_sort_box->SetSelection(sort_mode);
     m_sort_box->Bind(wxEVT_COMBOBOX, [this](wxCommandEvent &e) {
@@ -351,7 +355,9 @@ void MediaFilePanel::UpdateByObj(MachineObject* obj)
 
     Enable(obj && obj->is_info_ready() && obj->m_push_count > 0);
     if (machine == m_machine && !sdcard_state_changed) {
-        if ((m_waiting_enable && IsEnabled() && !(use_lan_ftps() && printer_silent())) ||
+        // IsThisEnabled: the state set above from the printer. IsEnabled is also false while
+        // a progress dialog disables the main window, which would never connect then.
+        if ((m_waiting_enable && IsThisEnabled() && !(use_lan_ftps() && printer_silent())) ||
             (m_waiting_support && (m_local_proto || m_remote_proto))) {
             auto fs = m_image_grid->GetFileSystem();
             if (fs) fs->Retry();
@@ -378,6 +384,7 @@ void MediaFilePanel::UpdateByObj(MachineObject* obj)
         m_image_grid->SetStatus(m_bmp_failed, _L("Please confirm if the printer is connected."));
     } else {
         boost::shared_ptr<PrinterFileSystem> fs(new PrinterFileSystem);
+        fs->SetDeviceId(m_machine);
         fs->SetSortMode(PrinterFileSystem::SortMode(m_sort_box->GetSelection()));
         fs->Attached();
         m_image_grid->SetFileSystem(fs);
@@ -399,6 +406,7 @@ void MediaFilePanel::UpdateByObj(MachineObject* obj)
             if (m_upload_listing)
                 closeUploadDialog();
             updateUploadButton();
+            printAgainIfListed();
         });
         fs->Bind(EVT_SELECT_CHANGED, [this, wfs = boost::weak_ptr(fs)](auto &e) {
             e.Skip();
@@ -626,7 +634,7 @@ void MediaFilePanel::fetchUrl(boost::weak_ptr<PrinterFileSystem> wfs)
 {
     boost::shared_ptr fs(wfs.lock());
     if (!fs || fs != m_image_grid->GetFileSystem()) return;
-    if (!IsEnabled()) {
+    if (!IsThisEnabled()) { // see UpdateByObj
         m_waiting_enable = true;
         m_image_grid->SetStatus(m_bmp_failed, _L("Please confirm if the printer is connected."));
         fs->SetUrl("0");
@@ -769,6 +777,61 @@ void MediaFilePanel::closeUploadDialog()
         m_upload_dlg->Destroy();
         m_upload_dlg = nullptr;
     }
+}
+
+void MediaFilePanel::PrintAgain(std::string const &job_file, std::string const &subtask)
+{
+    if (m_last_type != PrinterFileSystem::F_MODEL) {
+        // as a click on "Models": switches the list, which is then loaded again
+        wxCommandEvent e(wxEVT_COMMAND_BUTTON_CLICKED, m_button_model->GetId());
+        e.SetEventObject(m_button_model);
+        m_button_model->GetEventHandler()->ProcessEvent(e);
+    }
+    m_print_again_file    = job_file;
+    m_print_again_subtask = subtask;
+    printAgainIfListed();
+    if (!m_print_again_dlg && !(m_print_again_file.empty() && m_print_again_subtask.empty())) {
+        // reading the list from the printer can take a while. It stays open over a failed
+        // connection: switching the list reports Failed before fetchUrl connects again.
+        m_print_again_dlg = new MediaProgressDialog(_L("Print again"), this, [this] {
+            m_print_again_file.clear();
+            m_print_again_subtask.clear();
+            CallAfter([this] { closePrintAgainDialog(); });
+        });
+        m_print_again_dlg->Update(0, _L("Loading the file list from the printer..."));
+    }
+}
+
+void MediaFilePanel::closePrintAgainDialog()
+{
+    if (m_print_again_dlg) {
+        m_print_again_dlg->Destroy();
+        m_print_again_dlg = nullptr;
+    }
+}
+
+void MediaFilePanel::printAgainIfListed()
+{
+    auto fs = m_image_grid->GetFileSystem();
+    if ((m_print_again_file.empty() && m_print_again_subtask.empty()) || fs == nullptr ||
+        fs->GetFileType() != PrinterFileSystem::F_MODEL || fs->GetStatus() != PrinterFileSystem::ListReady)
+        return;
+    std::string job_file, subtask;
+    job_file.swap(m_print_again_file);
+    subtask.swap(m_print_again_subtask);
+    // the print action shows its own progress while it fetches the model
+    closePrintAgainDialog();
+    for (size_t i = 0; i < fs->GetCount(); ++i) {
+        if (LanPrintHistory::is_job_file(fs->GetFile(i).name, job_file, subtask)) {
+            CallAfter([this, i] { doAction(i, 1); });
+            return;
+        }
+    }
+    BOOST_LOG_TRIVIAL(info) << "MediaFilePanel: print again: " << (job_file.empty() ? subtask : job_file) << " not on the storage";
+    // TRN %1% is a file or job name
+    MessageDialog(this, format_wxstr(_L("\"%1%\" was not found on the printer's storage."), from_u8(job_file.empty() ? subtask : job_file)),
+                  _L("Print again"), wxOK | wxICON_WARNING)
+        .ShowModal();
 }
 
 void MediaFilePanel::doAction(size_t index, int action)

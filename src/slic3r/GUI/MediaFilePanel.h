@@ -48,6 +48,10 @@ public:
 
     void SwitchStorage(bool external);
 
+    // Starts the print dialog for the job that ended on this printer (Device tab "Print again"): shows the
+    // models and opens the file once the list is loaded. job_file and subtask as in LanPrintHistory::is_job_file.
+    void PrintAgain(std::string const &job_file, std::string const &subtask);
+
 public:
     void Rescale();
 
@@ -65,6 +69,9 @@ private:
     bool printer_silent() const { return std::chrono::system_clock::now() - m_last_report > std::chrono::seconds(20); }
 
     void doAction(size_t index, int action);
+
+    void printAgainIfListed();
+    void closePrintAgainDialog();
 
     void applySortMode(int mode);
 
@@ -124,6 +131,9 @@ private:
     int m_last_mode = 0;
     int m_last_type = 0;
     std::set<int> m_last_errors;
+    std::string m_print_again_file; // job to print again once the model list is loaded
+    std::string m_print_again_subtask;
+    ProgressDialog *m_print_again_dlg = nullptr; // shown while the list of a job to print again loads
 };
 
 

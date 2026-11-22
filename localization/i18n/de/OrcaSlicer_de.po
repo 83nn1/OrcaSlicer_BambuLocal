@@ -8007,6 +8007,38 @@ msgid "Sort order of the files."
 msgstr "Sortierreihenfolge der Dateien."
 
 # AI Translated
+msgid "Last printed first"
+msgstr "Zuletzt gedruckte zuerst"
+
+# AI Translated
+msgid "Stopped %1%"
+msgstr "Abgebrochen %1%"
+
+# AI Translated
+msgid "Printed %1%, took %2%"
+msgstr "Gedruckt %1%, Dauer %2%"
+
+# AI Translated
+msgid "Printed %1%"
+msgstr "Gedruckt %1%"
+
+# AI Translated
+msgid "Open this job's file in the Storage tab and print it again."
+msgstr "Die Datei dieses Auftrags im Speicher-Tab öffnen und erneut drucken."
+
+# AI Translated
+msgid "\"%1%\" was not found on the printer's storage."
+msgstr "„%1%“ wurde im Speicher des Druckers nicht gefunden."
+
+# AI Translated
+msgid "Print again"
+msgstr "Nochmal drucken"
+
+# AI Translated
+msgid "Loading the file list from the printer..."
+msgstr "Die Dateiliste wird vom Drucker geladen..."
+
+# AI Translated
 msgid "Previews are not loaded while the printer is printing, so that the printer is not overloaded."
 msgstr "Während eines laufenden Drucks werden keine Vorschaubilder geladen, damit der Drucker nicht überlastet wird."
 

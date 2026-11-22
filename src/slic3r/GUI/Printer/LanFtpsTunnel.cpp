@@ -393,7 +393,12 @@ public:
         }
         {
             std::lock_guard<std::mutex> l(m_mutex);
-            m_requests.push_back(std::move(root));
+            // a model fetched for printing goes before the previews of the list, which may
+            // each need a whole file from the printer
+            if (type == SUB_FILE && root.contains("req") && root["req"].is_object() && root["req"].value("first", false))
+                m_requests.push_front(std::move(root));
+            else
+                m_requests.push_back(std::move(root));
         }
         m_cond.notify_all();
         return 0;

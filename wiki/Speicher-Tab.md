@@ -66,7 +66,7 @@ Auch ohne Druck schickt ein P1S unter FTPS-Last (Vorschauen laden, Hochladen) mi
 
 ## Sortierung
 
-Neben „Aktualisieren“ gibt es eine Auswahl für die Reihenfolge: neueste zuerst (Standard), älteste zuerst, Name A bis Z, Name Z bis A. Die Namenssortierung ignoriert Groß-/Kleinschreibung und Umlaute (ä wie a) und vergleicht Zahlen nach Wert (`plate_2` vor `plate_10`). Die Auswahl gilt für alle Drucker und bleibt gespeichert. Nach Name sortiert ist die Gruppierung nach Jahr/Monat (Zeitraffer) nicht verfügbar.
+Neben „Aktualisieren“ gibt es eine Auswahl für die Reihenfolge: neueste zuerst (Standard), älteste zuerst, Name A bis Z, Name Z bis A, zuletzt gedruckte zuerst (aus der [Druckhistorie](Druckhistorie)). Die Namenssortierung ignoriert Groß-/Kleinschreibung und Umlaute (ä wie a) und vergleicht Zahlen nach Wert (`plate_2` vor `plate_10`). Die Auswahl gilt für alle Drucker und bleibt gespeichert. Nach Name oder Druckhistorie sortiert ist die Gruppierung nach Jahr/Monat (Zeitraffer) nicht verfügbar.
 
 ## Geänderte Dateien
 
