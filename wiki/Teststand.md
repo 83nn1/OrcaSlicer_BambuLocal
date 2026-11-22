@@ -14,7 +14,7 @@ Was getestet wurde, gegen einen nachgebauten Drucker-FTPS-Server und am echten B
 | Benachrichtigung bei Druckende, Abbruch, Pause | | noch nicht getestet (V0.11.1) |
 | Druckhistorie im Speicher-Tab | | noch nicht getestet (V0.12.1) |
 | Sortierung „Zuletzt gedruckte zuerst“ | | noch nicht getestet (V0.13.1) |
-| „Nochmal drucken“ im Gerät-Tab | | Button und Sprung in den Speicher-Tab funktionieren (V0.13.1); Wartezeit bleibt merklich (V0.13.2); Hinweisfenster blieb hängen, weil die Liste bei offenem Fenster nicht neu verband (V0.13.4); behoben, noch nicht getestet (V0.13.5) |
+| „Nochmal drucken“ im Gerät-Tab | P1S | funktioniert mit Hinweisfenster bis zum Sendefenster (V0.13.5, 22.11.2026) |
 
 ## Andere Modelle
 
