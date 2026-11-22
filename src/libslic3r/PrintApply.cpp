@@ -427,10 +427,12 @@ public:
     };
 
     LayerRanges() = default;
-    LayerRanges(const t_layer_config_ranges &in) { this->assign(in); }
+    LayerRanges(const t_layer_config_ranges &in, double shrinkage_compensation_z) { this->assign(in, shrinkage_compensation_z); }
 
     // Convert input config ranges into continuous non-overlapping sorted vector of intervals and their configs.
-    void assign(const t_layer_config_ranges &in) {
+    // The input ranges are uncompensated print heights, the intervals are scaled by the Z shrinkage compensation
+    // like the PrintObject trafo the regions are generated in.
+    void assign(const t_layer_config_ranges &in, double shrinkage_compensation_z) {
         m_ranges.clear();
         m_ranges.reserve(in.size());
         // Input ranges are sorted lexicographically. First range trims the other ranges.
@@ -454,6 +456,11 @@ public:
             m_ranges.back().layer_height_range.second = DBL_MAX;
         else
             m_ranges.push_back({ t_layer_height_range(m_ranges.back().layer_height_range.second, DBL_MAX) });
+        for (LayerRange &range : m_ranges) {
+            range.layer_height_range.first *= shrinkage_compensation_z;
+            if (range.layer_height_range.second != DBL_MAX)
+                range.layer_height_range.second *= shrinkage_compensation_z;
+        }
     }
 
     const DynamicPrintConfig* config(const t_layer_height_range &range) const {
@@ -1063,6 +1070,12 @@ static PrintObjectRegions* generate_print_object_regions(
     all_regions.clear();
 
     bool reuse_old = print_object_regions_old && !print_object_regions_old->layer_ranges.empty();
+    if (reuse_old && ! std::equal(model_layer_ranges.begin(), model_layer_ranges.end(), layer_ranges_regions.begin(), layer_ranges_regions.end(),
+            [](const LayerRanges::LayerRange &range, const PrintObjectRegions::LayerRangeRegions &r) { return range.layer_height_range == r.layer_height_range; })) {
+        // The ranges carry the Z shrinkage compensation, which may have changed together with the volumes.
+        out->clear();
+        reuse_old = false;
+    }
 
     if (reuse_old) {
         // Reuse old bounding boxes of some ModelVolumes and their ranges.
@@ -1407,6 +1420,24 @@ Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_
         }
 
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ", has_scarf_joint_seam:" << has_scarf_joint_seam;
+    }
+
+    // A value outside [1, nozzle count] means nozzle 1. Normalize it here so the slicing engine
+    // (Extruder::extruder_id(), the machine envelope, the variant expansion and the snapshot below)
+    // only sees in-range values. This works on this print's copy of the config; readers of the
+    // plate/project config are not changed.
+    if (auto* filament_map_opt = new_full_config.option<ConfigOptionInts>("filament_map")) {
+        const auto* nozzle_diameter_opt = new_full_config.option<ConfigOptionFloats>("nozzle_diameter");
+        const int   nozzle_count        = nozzle_diameter_opt ? std::max(1, static_cast<int>(nozzle_diameter_opt->values.size())) : 1;
+        bool        out_of_range        = false;
+        for (int& nozzle : filament_map_opt->values)
+            if (nozzle < 1 || nozzle > nozzle_count) {
+                nozzle       = 1;
+                out_of_range = true;
+            }
+        if (out_of_range)
+            BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": filament_map names a nozzle outside 1.." << nozzle_count
+                                     << ", using nozzle 1 for those filaments";
     }
 
     //apply extruder related values
@@ -2162,10 +2193,12 @@ Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_
         if (print_object_regions == nullptr || model_object_status.print_object_regions_status != ModelObjectStatus::PrintObjectRegionsStatus::Valid) {
             // Layer ranges with their associated configurations. Remove overlaps between the ranges
             // and create the regions from scratch.
+            // A belt printer slices in the rotated frame, which the ranges do not follow (see slices_to_regions()),
+            // so they stay as they are there.
             print_object_regions = generate_print_object_regions(
                 print_object_regions,
                 print_object.model_object()->volumes,
-                LayerRanges(print_object.model_object()->layer_config_ranges),
+                LayerRanges(print_object.model_object()->layer_config_ranges, m_config.belt_printer.value ? 1. : this->shrinkage_compensation().z()),
                 m_default_region_config,
                 model_object_status.print_instances.front().trafo,
                 num_extruders ,

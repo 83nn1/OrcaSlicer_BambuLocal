@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-06 11:31-0600\n"
+"POT-Creation-Date: 2026-11-21 12:24+0800\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1000,7 +1000,8 @@ msgstr ""
 msgid "Cut to parts"
 msgstr ""
 
-msgid "Reset cutting plane and remove connectors"
+#. TRN: Part assignments are the upper/lower cut groups changed by right-clicking parts.
+msgid "Reset the cutting plane, remove connectors, and clear part assignments."
 msgstr ""
 
 msgid "Reset Cut"
@@ -5184,6 +5185,9 @@ msgstr ""
 msgid "Enable the prime tower and either disable purging in the prime tower or disable single extruder multimaterial mode."
 msgstr ""
 
+msgid "The Type 1 prime tower takes the prime volume from each filament, on its Multimaterial page."
+msgstr ""
+
 msgid "Enable the prime tower to use this setting."
 msgstr ""
 
@@ -8328,6 +8332,24 @@ msgid ""
 msgstr ""
 
 msgid "Error loading shaders"
+msgstr ""
+
+#. TRN The OpenGL context could not be made current, so nothing can be drawn in the 3D view.
+msgid "OpenGL could not be activated for the 3D view, so it cannot be shown."
+msgstr ""
+
+#. TRN %1% is the name of a graphics card or display adapter as Windows reports it, such as "Microsoft Basic Display Adapter".
+#, possible-boost-format
+msgid "The window is on a display driven by \"%1%\"."
+msgstr ""
+
+msgid "Make sure the display adapter driving this window's display is enabled and its driver is installed and up to date."
+msgstr ""
+
+msgid "If the computer has more than one graphics card, connecting the monitor to another one may help."
+msgstr ""
+
+msgid "If the problem remains, close any overlay or screen capture software and try again."
 msgstr ""
 
 msgctxt "Layers"
@@ -11994,6 +12016,9 @@ msgstr ""
 msgid "Wipe tower parameters"
 msgstr ""
 
+msgid "Prime volume"
+msgstr ""
+
 msgid "Multi Filament"
 msgstr ""
 
@@ -12058,6 +12083,12 @@ msgid "The selected printer does not support chamber temperature control."
 msgstr ""
 
 msgid "Set nonzero volumetric speed coefficients before enabling adaptive volumetric speed."
+msgstr ""
+
+msgid "Select wipe tower Type 1 in the printer settings to use this setting."
+msgstr ""
+
+msgid "Select wipe tower Type 1 on a printer whose extruder holds more than one nozzle to use this setting."
 msgstr ""
 
 msgid "Enable multitool ramming to edit this setting."
@@ -12486,6 +12517,11 @@ msgctxt "Nozzle flow type"
 msgid "XHF"
 msgstr ""
 
+#. TRN Printer settings extruder tab: the extruder's name, e.g. "Extruder 2", and its nozzle flow tag, e.g. "HF".
+#, possible-c-format, possible-boost-format
+msgid "%s: %s"
+msgstr ""
+
 msgid "No modifications need to be copied."
 msgstr ""
 
@@ -12498,6 +12534,11 @@ msgstr ""
 
 #, possible-c-format, possible-boost-format
 msgid "Do you want to modify the following parameters of the %s to that of the %s?"
+msgstr ""
+
+#. TRN %1% is the extruder (or nozzle variant) the values are copied from, %2% the list of those they are copied to, as the switch names them, e.g. "T2 HF, T3 HF".
+#, possible-boost-format
+msgid "Do you want to copy the following parameters of %1% to %2%?"
 msgstr ""
 
 msgid "Click to reset current value and attach to the global value."
@@ -12621,6 +12662,15 @@ msgstr ""
 msgid ""
 "\n"
 "You can discard the preset values you have modified, or choose to transfer the modified values to the new project"
+msgstr ""
+
+msgid "Click the compare button to see the full value."
+msgstr ""
+
+msgid "Process settings"
+msgstr ""
+
+msgid "Compare the full values"
 msgstr ""
 
 msgid "Extruder count"
@@ -13288,9 +13338,6 @@ msgstr ""
 msgid "HTTPS CA file is optional. It is only needed if you use HTTPS with a self-signed certificate."
 msgstr ""
 
-msgid "This system uses HTTPS certificates from the system Certificate Store or Keychain. To use a custom CA file, import it there."
-msgstr ""
-
 msgid "Printer model"
 msgstr ""
 
@@ -13307,6 +13354,9 @@ msgid "Connect"
 msgstr ""
 
 msgid "Manual Setup"
+msgstr ""
+
+msgid "This system uses HTTPS certificates from the system Certificate Store or Keychain. To use a custom CA file, import it there."
 msgstr ""
 
 msgid "IP and Access Code Verified! You may close the window"
@@ -13796,6 +13846,9 @@ msgstr ""
 msgid "Prime tower is too close to the clumping detection area. There may be collisions when printing."
 msgstr ""
 
+msgid "The extruder printable areas share no common area, so the prime tower cannot be printed.\n"
+msgstr ""
+
 msgid "Prime tower is partially outside the printable area, and it cannot be printed.\n"
 msgstr ""
 
@@ -13806,6 +13859,21 @@ msgid "Invalid recommended nozzle temperature range. The lower bound must be low
 msgstr ""
 
 msgid "If you still want to print, you can enable the option in Preferences / Control / Slicing / Remove mixed temperature restriction."
+msgstr ""
+
+msgid "A prime tower requires that all objects have the same layer height."
+msgstr ""
+
+msgid "A prime tower requires that all objects are printed over the same number of raft layers."
+msgstr ""
+
+msgid "The prime tower is only supported for multiple objects if they are printed with the same support_top_z_distance."
+msgstr ""
+
+msgid "A prime tower requires that all objects are sliced with the same layer height."
+msgstr ""
+
+msgid "The prime tower is only supported if all objects have the same variable layer height."
 msgstr ""
 
 msgid "No extrusions under current settings."
@@ -13926,21 +13994,6 @@ msgid "A prime tower is not supported when adaptive layer height is on. It requi
 msgstr ""
 
 msgid "A prime tower requires any “support gap” to be a multiple of layer height."
-msgstr ""
-
-msgid "A prime tower requires that all objects have the same layer height."
-msgstr ""
-
-msgid "A prime tower requires that all objects are printed over the same number of raft layers."
-msgstr ""
-
-msgid "The prime tower is only supported for multiple objects if they are printed with the same support_top_z_distance."
-msgstr ""
-
-msgid "A prime tower requires that all objects are sliced with the same layer height."
-msgstr ""
-
-msgid "The prime tower is only supported if all objects have the same variable layer height."
 msgstr ""
 
 msgid "One or more object were assigned an extruder that the printer does not have."
@@ -18759,9 +18812,6 @@ msgid "Flush multiplier (Fast mode)"
 msgstr ""
 
 msgid "The flush multiplier used in fast purge mode."
-msgstr ""
-
-msgid "Prime volume"
 msgstr ""
 
 msgid "This is the volume of material to prime the extruder with on the tower."
@@ -24813,6 +24863,15 @@ msgstr ""
 msgid "Constraints"
 msgstr ""
 
+msgid "No constraints yet"
+msgstr ""
+
+msgid "Zoom to selection"
+msgstr ""
+
+msgid "Delete constraint"
+msgstr ""
+
 msgid "Feature tree"
 msgstr ""
 
@@ -24837,9 +24896,6 @@ msgid "Move down"
 msgstr ""
 
 msgid "Show / hide"
-msgstr ""
-
-msgid "Zoom to selection"
 msgstr ""
 
 msgid "Check interference — find overlapping bodies"
@@ -24981,6 +25037,11 @@ msgstr[1] ""
 
 #, possible-c-format, possible-boost-format
 msgid "Sketch %d"
+msgstr ""
+
+#. TRN %1% is the name of the sketch being edited, as its Feature tree row shows it.
+#, possible-boost-format
+msgid "Editing: %1%   ·   N = look normal to the plane   ·   Confirm or Cancel in the toolbar"
 msgstr ""
 
 #, possible-c-format, possible-boost-format
@@ -25516,7 +25577,7 @@ msgstr ""
 msgid "  ·  Esc goes back to Select"
 msgstr ""
 
-msgid "  ·  click a constraint badge to remove it"
+msgid "  ·  click a constraint badge to select it"
 msgstr ""
 
 #, possible-c-format, possible-boost-format
@@ -25875,10 +25936,9 @@ msgstr ""
 msgid "Constraints (%d)"
 msgstr ""
 
-msgid "No constraints yet"
-msgstr ""
-
-msgid "Delete constraint"
+#. TRN Design tab status line. %1% names the selected sketch constraint, e.g. "Horizontal E0·P0 — E0·P1".
+#, possible-boost-format
+msgid "%1% selected — Delete removes it"
 msgstr ""
 
 msgid "Constraint deleted"

@@ -62,6 +62,7 @@
 #include <cstdint>
 #include <functional>
 #include <wx/colour.h>
+#include <wx/mousestate.h>
 #include <string_view>
 #include "slic3r/GUI/Selection.hpp"
 #include "GLCanvas3D.hpp"
@@ -1345,6 +1346,27 @@ bool GLCanvas3D::CenterOfMass::details_hovered() const
     return m_picked && hovered != nullptr && hovered == ImGui::FindWindowByName(details_window);
 }
 
+bool GLCanvas3D::CenterOfMass::details_contain(const Vec2d& point) const
+{
+    const ImGuiWindow* window = ImGui::FindWindowByName(details_window);
+    return m_picked && window != nullptr && window->Rect().Contains(ImVec2(float(point.x()), float(point.y())));
+}
+
+bool GLCanvas3D::CenterOfMass::details_pressed() const
+{
+    if (!details_hovered())
+        return false;
+    const ImGuiContext& g      = *ImGui::GetCurrentContext();
+    const ImGuiWindow*  window = g.HoveredWindow;
+    // The close button is active after a press on it, the window's move id after a press elsewhere on the window.
+    if (g.ActiveIdWindow == window && g.ActiveId != window->MoveId)
+        return false;
+    for (int button = 0; button < IM_ARRAYSIZE(g.IO.MouseDown); ++button)
+        if (g.IO.MouseDown[button] && window->Rect().Contains(g.IO.MouseClickedPos[button]))
+            return true;
+    return false;
+}
+
 bool GLCanvas3D::CenterOfMass::hide_details(GLCanvas3D& canvas)
 {
     if (!m_picked)
@@ -1682,6 +1704,10 @@ GLCanvas3D::~GLCanvas3D()
         if (m_fxaa_texture_id != 0) {
             glsafe(::glDeleteTextures(1, &m_fxaa_texture_id));
             m_fxaa_texture_id = 0;
+        }
+        if (m_fxaa_framebuffer_id != 0) {
+            glsafe(::glDeleteFramebuffers(1, &m_fxaa_framebuffer_id));
+            m_fxaa_framebuffer_id = 0;
         }
         if (m_ssao_color_texture_id != 0) {
             glsafe(::glDeleteTextures(1, &m_ssao_color_texture_id));
@@ -2151,6 +2177,11 @@ void GLCanvas3D::toggle_model_objects_visibility(bool visible, const ModelObject
                         vol->force_neutral_color = false;
                     else if (gizmo_type == GLGizmosManager::MmSegmentation)
                         vol->is_active = false;
+                    else if (gizmo_type == GLGizmosManager::TextureDisplacement) {
+                        vol->force_native_color = true;
+                        if (vol->is_modifier) // GLVolume::is_modifier == any non-model-part volume
+                            vol->is_active = false;
+                    }
                     else
                         vol->force_native_color = true;
                 }
@@ -2538,7 +2569,13 @@ void GLCanvas3D::_render_frame(bool scene_dirty, bool only_init)
         return;
 
     // ensures this canvas is current and initialized
-    if (!_is_shown_on_screen() || !_set_current() || !wxGetApp().init_opengl())
+    if (!_is_shown_on_screen())
+        return;
+    if (!_set_current()) {
+        wxGetApp().get_opengl_manager().report_make_current_failure(*m_canvas, m_context);
+        return;
+    }
+    if (!wxGetApp().init_opengl())
         return;
 
     if (!is_initialized() && !init())
@@ -3882,6 +3919,10 @@ void GLCanvas3D::load_gcode_preview(const GCodeProcessorResult& gcode_result, co
     const std::vector<BoundingBoxf3>& exclude_bounding_box = plate->get_exclude_areas();
 
     _set_shown_canvas_current();
+    // The viewer uploads to the GPU from here on. Without a context the driver lets us make
+    // current, the OpenGL functions were never loaded and there is nothing to draw it with.
+    if (!wxGetApp().init_opengl())
+        return;
 
     //BBS: init is called in GLCanvas3D.render()
     //when load gcode directly, it is too late
@@ -3974,6 +4015,7 @@ void GLCanvas3D::bind_event_handlers()
                         down = false;
                 }
                 m_navigator_dragging = false;
+                m_mouse.down_on_toolbar = false;
                 render();
             });
         m_event_handlers_bound = true;
@@ -4229,6 +4271,11 @@ bool GLCanvas3D::handle_shortcut(const KeyChord& chord)
     case Shortcut::AddInstance:    post_event(Event<int>(EVT_GLCANVAS_INCREASE_INSTANCES, +1)); break;
     case Shortcut::RemoveInstance: post_event(Event<int>(EVT_GLCANVAS_INCREASE_INSTANCES, -1)); break;
     case Shortcut::TogglePrintable: post_event(SimpleEvent(EVT_GLCANVAS_PRINTABLE)); break;
+    case Shortcut::ReloadFromDisk:
+        // Only where the context menu offers it: the 3D view's selection, with no gizmo open.
+        if (m_canvas_type == CanvasView3D && !m_gizmos.is_running() && wxGetApp().plater()->can_reload_from_disk())
+            wxGetApp().plater()->reload_from_disk();
+        break;
     case Shortcut::Arrange:
         if (!m_gizmos.is_running())
             post_event(SimpleEvent(EVT_GLCANVAS_ARRANGE));
@@ -4774,6 +4821,12 @@ void GLCanvas3D::on_gesture(wxGestureEvent &evt)
     m_dirty = true;
 }
 
+// ORCA true when the pressed button is the only one held, so no other drag is in progress
+static bool is_only_one_button_down(const wxMouseEvent& evt)
+{
+    return int(evt.LeftIsDown()) + int(evt.MiddleIsDown()) + int(evt.RightIsDown()) + int(evt.Aux1IsDown()) + int(evt.Aux2IsDown()) == 1;
+}
+
 void GLCanvas3D::on_mouse(wxMouseEvent& evt)
 {
     if (!m_initialized || !_set_current())
@@ -4819,7 +4872,21 @@ void GLCanvas3D::on_mouse(wxMouseEvent& evt)
     // that incorrectly suppresses the active drag's tooltip and can interrupt its processing. The active drag always takes priority.
     const bool other_drag_active = m_gizmos.is_dragging() || m_mouse.dragging || m_rectangle_selection.is_dragging() || m_layers_editing.state == LayersEditing::Editing;
 
-    if (imgui->update_mouse_data(evt) && !other_drag_active) {
+    // A drag that starts on a marker's details moves the view, as over empty space. Checked on the first drag event only,
+    // while ImGui still hovers what was under the press. After that, m_mouse.dragging keeps the drag on the canvas.
+    const bool camera_drag = evt.Dragging() && !other_drag_active && m_center_of_mass.details_pressed();
+    if (camera_drag) {
+        // Else the object under the details keeps a left drag from turning the view.
+        m_hover_volume_idxs.clear();
+        // From the press, as the canvas does, which went to the ImGui branch below and left its position in m_mouse.position.
+        m_mouse.drag.start_position_2D = Point(m_mouse.position.x(), m_mouse.position.y());
+        // Its release is no right click on the canvas, also when the view has not turned yet, as that takes a second drag event.
+        m_mouse.ignore_right_up = true;
+    }
+    // A click that closes a context menu has no move before it, so ImGui may not yet hover the details.
+    const bool click_on_details = (evt.ButtonDown() || evt.ButtonUp()) && m_center_of_mass.details_contain(pos.cast<double>());
+
+    if ((imgui->update_mouse_data(evt) || click_on_details) && !other_drag_active && !camera_drag) {
         if ((evt.LeftDown() || (evt.Moving() && (evt.AltDown() || evt.ShiftDown()))) && m_canvas != nullptr)
             m_canvas->SetFocus();
         m_mouse.position = evt.Leaving() ? Vec2d(-1.0, -1.0) : pos.cast<double>();
@@ -4946,6 +5013,26 @@ void GLCanvas3D::on_mouse(wxMouseEvent& evt)
         m_dirty = true;
     };
 
+    // ORCA a press on toolbar empty areas must not reach the 3D scene (selection, camera, painting...).
+    // Swallow it with the drags and the release that follow, wherever the mouse goes.
+    if (m_mouse.down_on_toolbar) {
+        const bool button_event = evt.ButtonDown() || evt.ButtonUp() || evt.ButtonDClick();
+        // all buttons released, also covers a release that never reached this handler. Clears down_on_toolbar
+        if (!evt.ButtonIsDown(wxMOUSE_BTN_ANY) && !evt.ButtonDown() && !evt.ButtonDClick())
+            mouse_up_cleanup();
+        if (button_event || evt.Dragging())
+            return;
+    }
+    else if (!mouse_in_layer_editing && (evt.ButtonDown() || evt.ButtonDClick()) && is_only_one_button_down(evt) &&
+             !m_gizmos.is_mouse_over_toolbar_icon(pos.cast<double>()) && _is_mouse_over_top_toolbar(pos.cast<double>())) {
+        m_mouse.down_on_toolbar = true;
+        m_mouse.set_start_position_2D_as_invalid();
+        m_mouse.set_start_position_3D_as_invalid();
+        if (!has_mouse_capture()) // keep getting the release when it happens outside the canvas
+            m_canvas->CaptureMouse();
+        return;
+    }
+
     if (!mouse_in_layer_editing && m_gizmos.on_mouse(evt)) {
         if (m_gizmos.is_running()) {
             _deactivate_arrange_menu();
@@ -5015,6 +5102,9 @@ void GLCanvas3D::on_mouse(wxMouseEvent& evt)
         m_mouse.ignore_left_up = true;
         return;
     }
+    // A right click off the details hides them, as a left one does.
+    if (evt.RightDown() && !mouse_in_layer_editing)
+        m_center_of_mass.hide_details(*this);
 
     bool any_gizmo_active = m_gizmos.get_current() != nullptr;
 
@@ -6334,6 +6424,7 @@ void GLCanvas3D::mouse_up_cleanup()
     m_mouse.dragging = false;
     m_mouse.ignore_left_up = false;
     m_mouse.ignore_right_up = false;
+    m_mouse.down_on_toolbar = false;
     m_dirty = true;
 
     if (m_canvas->HasCapture())
@@ -6408,8 +6499,8 @@ void GLCanvas3D::update_compacted_wipe_tower_clearance()
     // the moment that object goes over its limit - which is what makes the pair worth drawing at all.
     // The tier is per object, so a short object gets the narrow nozzle outline rather than the wide
     // body one it is not subject to; without that, a 3 mm object parked beside the tower would be drawn
-    // deep inside the keep-out ring while passing the check. Only the instances that already exceed
-    // allowed_rise also get a height limit plane.
+    // deep inside the keep-out ring while passing the check. Only the instances the validation refuses,
+    // next to the nozzle or within the toolhead radius, also get a height limit plane.
     Polygons                               outlines;
     std::vector<std::pair<Polygon, float>> height_polygons;
     bool                                   body_tier_used = false;
@@ -6424,15 +6515,17 @@ void GLCanvas3D::update_compacted_wipe_tower_clearance()
                 continue;
 
             // Same tiers and the same rise measured from the plate as
-            // Print::compacted_wipe_tower_clearance_valid(), so that the preview and the validation
-            // that follows it never contradict each other.
+            // Print::compacted_wipe_tower_clearance_valid(), so that the preview shows a height limit on
+            // the very objects the validation that follows refuses. Orca: like it, the preview leaves an
+            // object away from the toolhead to the check after slicing, which measures its rise from the
+            // tower as printed, so such an object gets no height limit plane.
             const double                  object_top = model_object->get_instance_max_z(i);
             const CompactedTowerClearance clearance  = compacted_wipe_tower_clearance(config, zone, inst_hull, object_top);
             body_tier_used                           = body_tier_used || compacted_tower_body_tier(clearance);
 
             const Polygon outline = compacted_wipe_tower_offender_outline(inst_hull, clearance.body_clearance);
             outlines.emplace_back(outline);
-            if (object_top <= clearance.allowed_rise + EPSILON)
+            if (! clearance.near_nozzle && ! clearance.near_body)
                 continue;
             height_polygons.emplace_back(outline, float(clearance.allowed_rise));
         }
@@ -8682,9 +8775,8 @@ void GLCanvas3D::_render_fps_overlay(int fps) const
     if (const ImGuiWindow* legend = ImGui::FindWindowByName("Legend"); m_canvas_type == ECanvasType::CanvasPreview && legend != nullptr && legend->Active)
         pos = ImVec2(legend->Pos.x - margin, legend->Pos.y);
     // The toolbar row can reach the corner on a narrow canvas; stack the overlay below it then.
-    else if (m_main_toolbar.is_enabled() &&
-             get_main_toolbar_offset() + m_main_toolbar.get_width() + m_separator_toolbar.get_width() + m_gizmos.get_scaled_total_width() + m_assemble_view_toolbar.get_width() > left)
-        pos.y = std::max(m_main_toolbar.get_height(), m_gizmos.get_scaled_total_height()) + margin;
+    else if (m_main_toolbar.is_enabled() && get_main_toolbar_offset() + get_top_toolbar_width() > left)
+        pos.y = get_top_toolbar_height() + margin;
     ImGui::SetNextWindowPos(pos, ImGuiCond_Always, ImVec2(1.0f, 0.0f));
     ImGui::SetNextWindowBgAlpha(0.35f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 8.0f * get_scale());
@@ -8740,7 +8832,7 @@ void GLCanvas3D::_render_fxaa_pass(unsigned int width, unsigned int height)
     if (shader == nullptr)
         return;
 
-    GLTexture::copy_from_framebuffer(m_fxaa_texture_id, m_fxaa_texture_size, width, height, GL_LINEAR);
+    GLTexture::copy_from_framebuffer(m_fxaa_texture_id, m_fxaa_framebuffer_id, m_fxaa_texture_size, width, height, GL_LINEAR);
 
     glsafe(::glDisable(GL_DEPTH_TEST));
     glsafe(::glDisable(GL_BLEND));
@@ -9076,7 +9168,10 @@ bool GLCanvas3D::_update_inactive_plates_visibility()
     if (plate != nullptr)
         for (const GLVolume* volume : m_volumes.volumes) {
             Instance& instance = instances[{ volume->object_idx(), volume->instance_idx() }];
-            instance.box.merge(volume->transformed_convex_hull_bounding_box());
+            // The footprint counts the same volumes plate membership does, the parts: a modifier
+            // or negative volume reaching over another plate does not put the object on it.
+            if (!volume->is_modifier)
+                instance.box.merge(volume->transformed_convex_hull_bounding_box());
             instance.selected |= volume->selected;
         }
 
@@ -10396,14 +10491,21 @@ void GLCanvas3D::_render_gizmos_overlay()
     }
 }
 
+float GLCanvas3D::get_top_toolbar_width() const
+{
+    return m_main_toolbar.get_width() + m_separator_toolbar.get_width() + m_gizmos.get_scaled_total_width() + m_assemble_view_toolbar.get_width();
+}
+
+float GLCanvas3D::get_top_toolbar_height() const
+{
+    return std::max({ m_main_toolbar.get_height(), m_gizmos.get_scaled_total_height(), m_assemble_view_toolbar.get_height() });
+}
+
 int GLCanvas3D::get_main_toolbar_offset() const
 {
     const float cnv_width              = get_canvas_size().get_width();
     const float collapse_toolbar_width = get_collapse_toolbar_width() * 2;
-    const float gizmo_width            = m_gizmos.get_scaled_total_width();
-    const float assemble_width         = m_assemble_view_toolbar.get_width();
-    const float separator_width        = m_separator_toolbar.get_width();
-    const float toolbar_total_width    = m_main_toolbar.get_width() + separator_width + gizmo_width + assemble_width + collapse_toolbar_width;
+    const float toolbar_total_width    = get_top_toolbar_width() + collapse_toolbar_width;
 
     if (cnv_width < toolbar_total_width) {
         return is_collapse_toolbar_on_left() ? collapse_toolbar_width : 0;
@@ -11440,6 +11542,29 @@ void GLCanvas3D::_render_separator_toolbar_left() const
 
     m_separator_toolbar.set_position(top, left);
     m_separator_toolbar.render(*this,GLToolbarItem::SeparatorLine);
+}
+
+// ORCA is mouse over the top toolbar area
+bool GLCanvas3D::_is_mouse_over_top_toolbar(const Vec2d& mouse_pos) const
+{
+    float left, width, height;
+    if (m_canvas_type == ECanvasType::CanvasAssembleView) {
+        if (!m_gizmos.is_enabled() || m_gizmos.get_selectable_icons_cnt() == 0)
+            return false;
+        // same as GLGizmosManager::do_render_overlay()
+        left   = 0.5f * (float)get_canvas_size().get_width() + 0.5f * m_paint_toolbar_width;
+        width  = m_gizmos.get_scaled_total_width();
+        height = m_gizmos.get_scaled_total_height();
+    } else {
+        if (!m_main_toolbar.is_enabled())
+            return false;
+        left   = (float)get_main_toolbar_offset();
+        width  = get_top_toolbar_width();
+        height = get_top_toolbar_height();
+    }
+
+    return left <= (float)mouse_pos.x() && (float)mouse_pos.x() <= left + width &&
+           0.f  <= (float)mouse_pos.y() && (float)mouse_pos.y() <= height;
 }
 
 void GLCanvas3D::_render_collapse_toolbar() const

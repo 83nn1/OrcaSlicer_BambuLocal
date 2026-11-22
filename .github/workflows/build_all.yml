@@ -276,6 +276,10 @@ jobs:
         - /opt/ghc:/opt/ghc1
         - /usr/local/share/boost:/usr/local/share/boost1
         - /opt/hostedtoolcache:/opt/hostedtoolcache1
+        # Updating a runtime renames its old deployment, which fails with
+        # "Invalid cross-device link" on hosts whose Docker overlay cannot
+        # rename directories from an image layer. A volume is not overlay.
+        - /var/lib/flatpak
     strategy:
       fail-fast: false
       matrix:
@@ -402,18 +406,6 @@ jobs:
       shell: bash
     - name: Pack deps/ for the Flatpak manifest
       run: ./scripts/flatpak/make_deps_tar.sh
-      shell: bash
-    # BambuLocal: updating the image's preinstalled GNOME SDK fails now and then with "Invalid
-    # cross-device link": flatpak renames directories that live in the image's lower overlay
-    # layer. Recreate each installation in the container's own layer before the build.
-    - name: Move the Flatpak installations out of the image layer
-      run: |
-        for dir in /var/lib/flatpak "$HOME/.local/share/flatpak"; do
-          [ -d "$dir" ] || continue
-          findmnt -T "$dir" || true
-          du -sh "$dir" || true
-          cp -a "$dir" "$dir.copy" && rm -rf "$dir" && cp -a "$dir.copy" "$dir" && rm -rf "$dir.copy"
-        done
       shell: bash
     - uses: flatpak/flatpak-github-actions/flatpak-builder@master
       with:

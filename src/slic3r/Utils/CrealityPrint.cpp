@@ -278,16 +278,20 @@ static int reported_cfs_connect(const std::string& msg)
     return cfs_connect == 1 ? 1 : -1;
 }
 
-// Sends the CFS slot query and returns the reply, or nothing once a status reports no CFS connected, which also sets *no_cfs.
+// Sends the CFS slot query and returns the reply, or nothing when none arrives in time.
 // The query gets slots_reply, or the later of slots_reply and cfs_reply once a status reports a CFS connected, since such a printer does answer.
+// A status reporting no CFS connected cuts the wait to no_cfs_reply from then, and sets *no_cfs if no reply follows: a SPARKX i7
+// reports no CFS connected for its CFS Lite and still sends the slots.
 static std::string ws_query_slots(net::io_context&                      ioc,
                                   websocket::stream<beast::tcp_stream>& ws,
                                   std::chrono::milliseconds             slots_reply,
                                   std::chrono::milliseconds             cfs_reply,
+                                  std::chrono::milliseconds             no_cfs_reply,
                                   bool*                                 no_cfs)
 {
-    const auto sent     = std::chrono::steady_clock::now();
-    auto       deadline = sent + slots_reply;
+    const auto sent            = std::chrono::steady_clock::now();
+    auto       deadline        = sent + slots_reply;
+    bool       reported_no_cfs = false;
     beast::get_lowest_layer(ws).expires_at(deadline);
     ws_send(ioc, ws, json{{"method", "get"}, {"params", {{"boxsInfo", 1}}}});
 
@@ -309,16 +313,22 @@ static std::string ws_query_slots(net::io_context&                      ioc,
         if (msg.find("boxsInfo") != std::string::npos)
             return msg;
         const int cfs_connect = reported_cfs_connect(msg);
-        if (cfs_connect == 0) {
-            BOOST_LOG_TRIVIAL(info) << "CrealityPrint: The printer reports no CFS connected";
-            if (no_cfs)
-                *no_cfs = true;
-            return {};
-        }
-        if (cfs_connect == 1) {
-            deadline = sent + std::max(slots_reply, cfs_reply);
+        if (cfs_connect == 0 && !reported_no_cfs) {
+            reported_no_cfs = true;
+            deadline        = std::min(deadline, std::chrono::steady_clock::now() + no_cfs_reply);
             beast::get_lowest_layer(ws).expires_at(deadline);
         }
+        if (cfs_connect == 1) {
+            reported_no_cfs = false;
+            deadline        = sent + std::max(slots_reply, cfs_reply);
+            beast::get_lowest_layer(ws).expires_at(deadline);
+        }
+    }
+    if (reported_no_cfs) {
+        BOOST_LOG_TRIVIAL(info) << "CrealityPrint: The printer reports no CFS connected";
+        if (no_cfs)
+            *no_cfs = true;
+        return {};
     }
     BOOST_LOG_TRIVIAL(warning) << "CrealityPrint: Timed out waiting for a 'boxsInfo' response";
     return {};
@@ -331,12 +341,16 @@ static void ws_close(net::io_context& ioc, websocket::stream<beast::tcp_stream>&
     run_until_done(ioc, [&](auto&& handler) { ws.async_close(websocket::close_code::normal, handler); });
 }
 
-// K1-family firmware stores gcodes under /usr/data and uses a stricter WebSocket
-// protocol (TEXT frames, heartbeat acks). The /info model is the literal name on
-// K1-family, including the *_CFS-C bundle variants. Add verified model IDs here.
-static bool is_k1_family(const std::string& model)
+// Add a model by its /info value once its firmware is known to keep gcodes under /usr/data; every other model uses /mnt/UDISK.
+static bool stores_gcode_in_usr_data(const std::string& model)
 {
-    static const std::unordered_set<std::string> k1_models = {
+    static const std::unordered_set<std::string> usr_data_models = {
+        "F001", // Ender-3 V3 series
+        "F002", // Ender-3 V3 Plus
+        "F003", // CR-10 SE
+        "F004", // Ender-5 Max
+        "F005", // Ender-3 V3 KE
+        "F016", // K2 SE
         "K1",
         "K1 Max",
         "K1 Max_CFS-C",
@@ -346,7 +360,7 @@ static bool is_k1_family(const std::string& model)
         "K1C_CFS-C",
         "K1_CFS-C",
     };
-    return k1_models.count(model) > 0;
+    return usr_data_models.count(model) > 0;
 }
 
 void CrealityPrint::query_model() const
@@ -416,7 +430,7 @@ std::string CrealityPrint::query_boxes_info(bool* no_cfs) const
         websocket::stream<beast::tcp_stream> ws{ioc};
         ws_connect(ioc, ws, m_host, ws_settings.port, ws_settings.connect);
 
-        std::string result = ws_query_slots(ioc, ws, ws_settings.slots_reply, ws_settings.reply, no_cfs);
+        std::string result = ws_query_slots(ioc, ws, ws_settings.slots_reply, ws_settings.reply, ws_settings.no_cfs_reply, no_cfs);
 
         ws_close(ioc, ws, ws_settings.close);
         return result;
@@ -520,7 +534,7 @@ bool CrealityPrint::start_print(wxString &msg, const std::string &filename, cons
         // Runs before the WebSocket opens and its reply deadline starts, since it can query the
         // printer over HTTP. It also fills m_model.
         const bool        multi_color = supports_multi_color_print();
-        const std::string data_root   = is_k1_family(m_model) ? "/usr/data" : "/mnt/UDISK";
+        const std::string data_root   = stores_gcode_in_usr_data(m_model) ? "/usr/data" : "/mnt/UDISK";
         const std::string gcode_path  = data_root + "/printer_data/gcodes/" + filename;
 
         net::io_context ioc;

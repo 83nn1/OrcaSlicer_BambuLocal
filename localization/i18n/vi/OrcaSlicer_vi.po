@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Orca Slicer\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-06 11:31-0600\n"
+"POT-Creation-Date: 2026-11-21 12:24+0800\n"
 "PO-Revision-Date: 2025-10-02 17:43+0700\n"
 "Last-Translator: \n"
 "Language-Team: hainguyen.ts13@gmail.com\n"
@@ -1143,8 +1143,10 @@ msgstr "Sau khi cắt"
 msgid "Cut to parts"
 msgstr "Cắt thành phần"
 
-msgid "Reset cutting plane and remove connectors"
-msgstr "Đặt lại mặt cắt và xóa connector"
+# AI Translated
+#. TRN: Part assignments are the upper/lower cut groups changed by right-clicking parts.
+msgid "Reset the cutting plane, remove connectors, and clear part assignments."
+msgstr "Đặt lại mặt cắt, xóa connector và bỏ gán phần."
 
 # AI Translated
 msgid "Reset Cut"
@@ -5995,6 +5997,10 @@ msgid "Enable the prime tower and either disable purging in the prime tower or d
 msgstr "Bật prime tower và tắt xả trong prime tower hoặc tắt chế độ extruder đơn đa vật liệu."
 
 # AI Translated
+msgid "The Type 1 prime tower takes the prime volume from each filament, on its Multimaterial page."
+msgstr "Prime tower loại 1 lấy khối lượng nạp từ từng filament, trên trang Đa vật liệu của filament đó."
+
+# AI Translated
 msgid "Enable the prime tower to use this setting."
 msgstr "Bật prime tower để dùng cài đặt này."
 
@@ -9577,6 +9583,29 @@ msgstr ""
 
 msgid "Error loading shaders"
 msgstr "Lỗi tải shader"
+
+# AI Translated
+#. TRN The OpenGL context could not be made current, so nothing can be drawn in the 3D view.
+msgid "OpenGL could not be activated for the 3D view, so it cannot be shown."
+msgstr "Không thể kích hoạt OpenGL cho chế độ xem 3D nên không thể hiển thị."
+
+# AI Translated
+#. TRN %1% is the name of a graphics card or display adapter as Windows reports it, such as "Microsoft Basic Display Adapter".
+#, boost-format
+msgid "The window is on a display driven by \"%1%\"."
+msgstr "Cửa sổ đang nằm trên màn hình do \"%1%\" điều khiển."
+
+# AI Translated
+msgid "Make sure the display adapter driving this window's display is enabled and its driver is installed and up to date."
+msgstr "Hãy đảm bảo bộ điều hợp hiển thị điều khiển màn hình của cửa sổ này đã được bật và trình điều khiển của nó đã được cài đặt và cập nhật."
+
+# AI Translated
+msgid "If the computer has more than one graphics card, connecting the monitor to another one may help."
+msgstr "Nếu máy tính có nhiều card đồ họa, việc cắm màn hình vào card khác có thể giúp ích."
+
+# AI Translated
+msgid "If the problem remains, close any overlay or screen capture software and try again."
+msgstr "Nếu sự cố vẫn còn, hãy đóng mọi phần mềm overlay hoặc quay màn hình rồi thử lại."
 
 msgctxt "Layers"
 msgid "Top"
@@ -13994,6 +14023,9 @@ msgstr "G-code kết thúc filament"
 msgid "Wipe tower parameters"
 msgstr "Tham số wipe tower"
 
+msgid "Prime volume"
+msgstr "Khối lượng nạp"
+
 # AI Translated
 msgid "Multi Filament"
 msgstr "Nhiều filament"
@@ -14075,6 +14107,16 @@ msgstr "Máy in đã chọn không hỗ trợ điều khiển nhiệt độ bu�
 # AI Translated
 msgid "Set nonzero volumetric speed coefficients before enabling adaptive volumetric speed."
 msgstr "Đặt các hệ số tốc độ thể tích khác 0 trước khi bật tốc độ thể tích thích ứng."
+
+# AI Translated
+# Needs human review: Quotes the catalog's 'Wipe tower type' label, whose word for the tower differs from the glossary's Prime tower / Wipe tower rendering.
+msgid "Select wipe tower Type 1 in the printer settings to use this setting."
+msgstr "Chọn \"Loại 1\" cho \"Loại tháp lau\" trong cài đặt máy in để dùng cài đặt này."
+
+# AI Translated
+# Needs human review: Quotes the catalog's 'Wipe tower type' label, whose word for the tower differs from the glossary's Prime tower / Wipe tower rendering.
+msgid "Select wipe tower Type 1 on a printer whose extruder holds more than one nozzle to use this setting."
+msgstr "Chọn \"Loại 1\" cho \"Loại tháp lau\" trên máy in có extruder chứa nhiều hơn một đầu phun để dùng cài đặt này."
 
 # AI Translated
 msgid "Enable multitool ramming to edit this setting."
@@ -14607,6 +14649,12 @@ msgid "XHF"
 msgstr "XHF"
 
 # AI Translated
+#. TRN Printer settings extruder tab: the extruder's name, e.g. "Extruder 2", and its nozzle flow tag, e.g. "HF".
+#, c-format, boost-format
+msgid "%s: %s"
+msgstr "%s: %s"
+
+# AI Translated
 msgid "No modifications need to be copied."
 msgstr "Không có thay đổi nào cần sao chép."
 
@@ -14623,6 +14671,12 @@ msgstr "Sửa tham số của %s"
 #, c-format, boost-format
 msgid "Do you want to modify the following parameters of the %s to that of the %s?"
 msgstr "Bạn có muốn sửa các tham số sau của %s thành tham số của %s không?"
+
+# AI Translated
+#. TRN %1% is the extruder (or nozzle variant) the values are copied from, %2% the list of those they are copied to, as the switch names them, e.g. "T2 HF, T3 HF".
+#, boost-format
+msgid "Do you want to copy the following parameters of %1% to %2%?"
+msgstr "Bạn có muốn sao chép các tham số sau của %1% sang %2% không?"
 
 msgid "Click to reset current value and attach to the global value."
 msgstr "Nhấp để đặt lại giá trị hiện tại và đính kèm với giá trị toàn cục."
@@ -14772,6 +14826,18 @@ msgid ""
 msgstr ""
 "\n"
 "Bạn có thể loại bỏ các giá trị preset bạn đã thay đổi, hoặc chọn chuyển các giá trị đã thay đổi sang dự án mới"
+
+# AI Translated
+msgid "Click the compare button to see the full value."
+msgstr "Nhấn nút so sánh để xem giá trị đầy đủ."
+
+# AI Translated
+msgid "Process settings"
+msgstr "Cài đặt quy trình"
+
+# AI Translated
+msgid "Compare the full values"
+msgstr "So sánh giá trị đầy đủ"
 
 msgid "Extruder count"
 msgstr "Số lượng đầu đùn"
@@ -15578,10 +15644,6 @@ msgstr "Mở file chứng chỉ CA"
 msgid "HTTPS CA file is optional. It is only needed if you use HTTPS with a self-signed certificate."
 msgstr "File CA HTTPS là tùy chọn. Nó chỉ cần thiết nếu bạn sử dụng HTTPS với chứng chỉ tự ký."
 
-# AI Translated
-msgid "This system uses HTTPS certificates from the system Certificate Store or Keychain. To use a custom CA file, import it there."
-msgstr "Hệ thống này sử dụng chứng chỉ HTTPS từ Kho chứng chỉ hệ thống hoặc Keychain. Để dùng file CA tùy chỉnh, hãy nhập nó vào đó."
-
 msgid "Printer model"
 msgstr "Model máy in"
 
@@ -15600,6 +15662,10 @@ msgstr "Kết nối"
 
 msgid "Manual Setup"
 msgstr "Thiết lập thủ công"
+
+# AI Translated
+msgid "This system uses HTTPS certificates from the system Certificate Store or Keychain. To use a custom CA file, import it there."
+msgstr "Hệ thống này sử dụng chứng chỉ HTTPS từ Kho chứng chỉ hệ thống hoặc Keychain. Để dùng file CA tùy chỉnh, hãy nhập nó vào đó."
 
 # AI Translated
 msgid "IP and Access Code Verified! You may close the window"
@@ -16173,6 +16239,10 @@ msgid "Prime tower is too close to the clumping detection area. There may be col
 msgstr "Prime tower ở quá gần vùng phát hiện vón cục, có thể xảy ra va chạm khi in."
 
 # AI Translated
+msgid "The extruder printable areas share no common area, so the prime tower cannot be printed.\n"
+msgstr "Vùng in được của các extruder không có phần chung, nên không thể in prime tower.\n"
+
+# AI Translated
 msgid "Prime tower is partially outside the printable area, and it cannot be printed.\n"
 msgstr "Prime tower nằm một phần ngoài vùng in được, và không thể in.\n"
 
@@ -16187,6 +16257,21 @@ msgstr "Dải nhiệt độ đầu phun khuyến nghị không hợp lệ. Cận
 # AI Translated
 msgid "If you still want to print, you can enable the option in Preferences / Control / Slicing / Remove mixed temperature restriction."
 msgstr "Nếu bạn vẫn muốn in, bạn có thể bật tùy chọn trong Tùy chọn / Điều khiển / Slice / Bỏ hạn chế trộn lẫn nhiệt độ."
+
+msgid "A prime tower requires that all objects have the same layer height."
+msgstr "Prime tower yêu cầu tất cả đối tượng có cùng chiều cao lớp."
+
+msgid "A prime tower requires that all objects are printed over the same number of raft layers."
+msgstr "Prime tower yêu cầu tất cả đối tượng được in trên cùng số lớp bè."
+
+msgid "The prime tower is only supported for multiple objects if they are printed with the same support_top_z_distance."
+msgstr "Prime tower chỉ được hỗ trợ cho nhiều đối tượng nếu chúng được in với cùng support_top_z_distance."
+
+msgid "A prime tower requires that all objects are sliced with the same layer height."
+msgstr "Prime tower yêu cầu tất cả đối tượng được slice với cùng chiều cao lớp."
+
+msgid "The prime tower is only supported if all objects have the same variable layer height."
+msgstr "Prime tower chỉ được hỗ trợ nếu tất cả đối tượng có cùng chiều cao lớp thay đổi."
 
 msgid "No extrusions under current settings."
 msgstr "Không có đùn dưới cài đặt hiện tại."
@@ -16327,21 +16412,6 @@ msgstr "Prime tower không được hỗ trợ khi chiều cao lớp thích ứn
 
 msgid "A prime tower requires any “support gap” to be a multiple of layer height."
 msgstr "Prime tower yêu cầu \"khoảng cách support\" là bội số của chiều cao lớp."
-
-msgid "A prime tower requires that all objects have the same layer height."
-msgstr "Prime tower yêu cầu tất cả đối tượng có cùng chiều cao lớp."
-
-msgid "A prime tower requires that all objects are printed over the same number of raft layers."
-msgstr "Prime tower yêu cầu tất cả đối tượng được in trên cùng số lớp bè."
-
-msgid "The prime tower is only supported for multiple objects if they are printed with the same support_top_z_distance."
-msgstr "Prime tower chỉ được hỗ trợ cho nhiều đối tượng nếu chúng được in với cùng support_top_z_distance."
-
-msgid "A prime tower requires that all objects are sliced with the same layer height."
-msgstr "Prime tower yêu cầu tất cả đối tượng được slice với cùng chiều cao lớp."
-
-msgid "The prime tower is only supported if all objects have the same variable layer height."
-msgstr "Prime tower chỉ được hỗ trợ nếu tất cả đối tượng có cùng chiều cao lớp thay đổi."
 
 msgid "One or more object were assigned an extruder that the printer does not have."
 msgstr "Một hoặc nhiều đối tượng được gán extruder mà máy in không có."
@@ -22223,9 +22293,6 @@ msgstr "Hệ số nhân xả (Chế độ nhanh)"
 # AI Translated
 msgid "The flush multiplier used in fast purge mode."
 msgstr "Hệ số nhân xả dùng trong chế độ xả nhanh."
-
-msgid "Prime volume"
-msgstr "Khối lượng nạp"
 
 msgid "This is the volume of material to prime the extruder with on the tower."
 msgstr "Khối lượng vật liệu để nạp extruder trên tower."
@@ -29665,6 +29732,18 @@ msgid "Constraints"
 msgstr "Ràng buộc"
 
 # AI Translated
+msgid "No constraints yet"
+msgstr "Chưa có ràng buộc nào"
+
+# AI Translated
+msgid "Zoom to selection"
+msgstr "Thu phóng đến vùng chọn"
+
+# AI Translated
+msgid "Delete constraint"
+msgstr "Xóa ràng buộc"
+
+# AI Translated
 msgid "Feature tree"
 msgstr "Cây đặc trưng"
 
@@ -29697,10 +29776,6 @@ msgstr "Di chuyển xuống"
 # AI Translated
 msgid "Show / hide"
 msgstr "Hiện / ẩn"
-
-# AI Translated
-msgid "Zoom to selection"
-msgstr "Thu phóng đến vùng chọn"
 
 # AI Translated
 msgid "Check interference — find overlapping bodies"
@@ -29877,6 +29952,12 @@ msgstr[0] "%d bậc tự do"
 #, c-format, boost-format
 msgid "Sketch %d"
 msgstr "Phác thảo %d"
+
+# AI Translated
+#. TRN %1% is the name of the sketch being edited, as its Feature tree row shows it.
+#, boost-format
+msgid "Editing: %1%   ·   N = look normal to the plane   ·   Confirm or Cancel in the toolbar"
+msgstr "Đang chỉnh sửa: %1%   ·   N = nhìn vuông góc với mặt phẳng   ·   Xác nhận hoặc Hủy trên thanh công cụ"
 
 # AI Translated
 #, c-format, boost-format
@@ -30568,8 +30649,8 @@ msgid "  ·  Esc goes back to Select"
 msgstr "  ·  Esc để quay lại Chọn"
 
 # AI Translated
-msgid "  ·  click a constraint badge to remove it"
-msgstr "  ·  nhấn vào nhãn ràng buộc để xóa nó"
+msgid "  ·  click a constraint badge to select it"
+msgstr "  ·  nhấn vào nhãn ràng buộc để chọn"
 
 # AI Translated
 #, c-format, boost-format
@@ -31032,12 +31113,10 @@ msgid "Constraints (%d)"
 msgstr "Ràng buộc (%d)"
 
 # AI Translated
-msgid "No constraints yet"
-msgstr "Chưa có ràng buộc nào"
-
-# AI Translated
-msgid "Delete constraint"
-msgstr "Xóa ràng buộc"
+#. TRN Design tab status line. %1% names the selected sketch constraint, e.g. "Horizontal E0·P0 — E0·P1".
+#, boost-format
+msgid "%1% selected — Delete removes it"
+msgstr "Đã chọn %1% — nhấn Delete để xóa"
 
 # AI Translated
 msgid "Constraint deleted"
@@ -39698,348 +39777,3 @@ msgid ""
 msgstr ""
 "Tránh cong vênh\n"
 "Bạn có biết rằng khi in vật liệu dễ cong vênh như ABS, tăng nhiệt độ bàn nóng một cách thích hợp có thể giảm xác suất cong vênh không?"
-
-# AI Translated
-#~ msgid "Subdivision mesh"
-#~ msgstr "Chia nhỏ lưới"
-
-# AI Translated
-#~ msgid "Updates are available for your OrcaCloud plugins."
-#~ msgstr "Đã có bản cập nhật cho các plugin OrcaCloud của bạn."
-
-# AI Translated
-#~ msgid "Some imported objects contain modifiers or parts with individual settings. They are shown as assemblies so that these settings remain visible."
-#~ msgstr "Một số vật thể được nhập chứa modifier hoặc phần có cài đặt riêng. Chúng được hiển thị dưới dạng cụm lắp ráp để các cài đặt này vẫn hiển thị."
-
-# AI Translated
-#~ msgid "Geometry import"
-#~ msgstr "Nhập dữ liệu hình học"
-
-# AI Translated
-#~ msgid "Files"
-#~ msgstr "File"
-
-# AI Translated
-#~ msgid "Folder paths"
-#~ msgstr "Đường dẫn thư mục"
-
-# AI Translated
-#~ msgid "File import"
-#~ msgstr "Nhập file"
-
-# AI Translated
-#~ msgid "Ask how to handle unsupported characters in imported names"
-#~ msgstr "Hỏi cách xử lý ký tự không được hỗ trợ trong tên được nhập"
-
-# AI Translated
-#~ msgid "Show the removal or replacement choices when original names contain unsupported characters."
-#~ msgstr "Hiện các lựa chọn xóa hoặc thay thế khi tên gốc chứa ký tự không được hỗ trợ."
-
-# AI Translated
-#~ msgid "3MF import"
-#~ msgstr "Nhập 3MF"
-
-# AI Translated
-#~ msgid "Show options when importing"
-#~ msgstr "Hiện tùy chọn khi nhập"
-
-# AI Translated
-#~ msgid "Show original-name and sorting options when importing a 3MF without project settings into the current project."
-#~ msgstr "Hiện tùy chọn tên gốc và sắp xếp khi nhập một file 3MF không có cài đặt dự án vào dự án hiện tại."
-
-# AI Translated
-#~ msgid "Keep original names"
-#~ msgstr "Giữ tên gốc"
-
-# AI Translated
-#~ msgid "Use the body names stored in the imported file when it contains them."
-#~ msgstr "Dùng tên khối được lưu trong file được nhập nếu file có chứa các tên đó."
-
-# AI Translated
-#~ msgid "STEP import"
-#~ msgstr "Nhập STEP"
-
-# AI Translated
-#~ msgid "Linear deflection"
-#~ msgstr "Độ lệch tuyến tính"
-
-# AI Translated
-#~ msgid "Angle deflection"
-#~ msgstr "Độ lệch góc"
-
-# AI Translated
-#~ msgid "Split into multiple objects"
-#~ msgstr "Tách thành nhiều vật thể"
-
-# AI Translated
-#~ msgid ""
-#~ "If enabled, compound and compsolid shapes in imported STEP files are split into multiple objects.\n"
-#~ "Used as the default in the import dialog, or directly when the import dialog is disabled.\n"
-#~ "Default: enabled."
-#~ msgstr ""
-#~ "Nếu bật, các hình compound và compsolid trong file STEP được nhập sẽ được tách thành nhiều vật thể.\n"
-#~ "Được dùng làm mặc định trong hộp thoại nhập, hoặc dùng trực tiếp khi hộp thoại nhập bị tắt.\n"
-#~ "Mặc định: bật."
-
-# AI Translated
-#~ msgid "AMF import"
-#~ msgstr "Nhập AMF"
-
-# AI Translated
-#~ msgid "Show body grouping, original-name and sorting options when importing geometry into the current project."
-#~ msgstr "Hiện tùy chọn nhóm khối, tên gốc và sắp xếp khi nhập dữ liệu hình học vào dự án hiện tại."
-
-# AI Translated
-#~ msgid "DRC export"
-#~ msgstr "Xuất DRC"
-
-# AI Translated
-#~ msgid "Behaviour"
-#~ msgstr "Hành vi"
-
-# AI Translated
-#~ msgid "Speed dial"
-#~ msgstr "Speed Dial"
-
-# AI Translated
-#, boost-format
-#~ msgid "%1% is printed later than its place in the object list, to avoid a collision."
-#~ msgstr "%1% được in muộn hơn vị trí của nó trong danh sách đối tượng để tránh va chạm."
-
-# AI Translated
-#, boost-format
-#~ msgid "Spiral vase mode needs no sparse infill, one wall loop and no top shell layers, but the object %1% uses other values, so it will not print as a continuous spiral."
-#~ msgstr "Chế độ bình xoắn ốc yêu cầu không có infill thưa, một vòng wall và không có lớp vỏ trên, nhưng vật thể %1% dùng giá trị khác nên sẽ không được in thành đường xoắn ốc liên tục."
-
-# AI Translated
-#, boost-format
-#~ msgid ""
-#~ "The Adaptive Pressure Advance model of filament %1% contains invalid values.\n"
-#~ "%2%"
-#~ msgstr ""
-#~ "Mô hình Pressure Advance thích ứng của filament %1% chứa giá trị không hợp lệ.\n"
-#~ "%2%"
-
-# AI Translated
-#~ msgid "Used filament types"
-#~ msgstr "Các loại filament đã dùng"
-
-# AI Translated
-#~ msgid "Underscore-separated list of all filament types used during the print."
-#~ msgstr "Danh sách tất cả loại filament được dùng trong bản in, phân tách bằng dấu gạch dưới."
-
-# AI Translated
-#~ msgid "Loads each body of a multi-body part separately. Needed to keep the bodies' original names."
-#~ msgstr "Tải riêng từng khối của một phần nhiều khối. Cần thiết để giữ tên gốc của các khối."
-
-# AI Translated
-#~ msgid "Load as an assembly"
-#~ msgstr "Tải dưới dạng cụm lắp ráp"
-
-# AI Translated
-#~ msgid "Load as a single object (can be split later)"
-#~ msgstr "Tải dưới dạng một vật thể (có thể tách sau)"
-
-# AI Translated
-#~ msgid "The original bodies and names are kept inside the object. Use Split to parts to show them as separate parts."
-#~ msgstr "Các khối và tên gốc được giữ bên trong vật thể. Dùng \"Tách thành phần\" để hiển thị chúng thành các phần riêng biệt."
-
-# AI Translated
-#~ msgid "Use the body names stored in the file, when there are any. Needs Split compound for parts with several bodies."
-#~ msgstr "Dùng tên khối được lưu trong file, nếu có. Cần bật \"Tách compound\" cho các phần có nhiều khối."
-
-# AI Translated
-#~ msgid "Sort parts by name"
-#~ msgstr "Sắp xếp các phần theo tên"
-
-# AI Translated
-#~ msgid "Sort the parts inside each imported assembly in the object list. This does not change the order used for slicing. Available when Keep original names is on."
-#~ msgstr "Sắp xếp các phần bên trong mỗi cụm lắp ráp được nhập trong danh sách vật thể. Thao tác này không thay đổi thứ tự dùng để slice. Khả dụng khi \"Giữ tên gốc\" được bật."
-
-# AI Translated
-#~ msgid "Don't ask again"
-#~ msgstr "Đừng hỏi lại"
-
-# AI Translated
-#~ msgid "Save these choices and apply them without asking next time. You can show this dialog again in Preferences."
-#~ msgstr "Lưu các lựa chọn này và áp dụng mà không hỏi vào lần sau. Bạn có thể hiển thị lại hộp thoại này trong Tùy chọn."
-
-# AI Translated
-#~ msgid "3MF geometry import options"
-#~ msgstr "Tùy chọn nhập dữ liệu hình học 3MF"
-
-# AI Translated
-#~ msgid "AMF geometry import options"
-#~ msgstr "Tùy chọn nhập dữ liệu hình học AMF"
-
-# AI Translated
-#~ msgid "Choose how to name and order the parts of this file."
-#~ msgstr "Chọn cách đặt tên và sắp xếp thứ tự các phần của file này."
-
-# AI Translated
-#~ msgid "Choose how to load the bodies in this file."
-#~ msgstr "Chọn cách tải các khối trong file này."
-
-# AI Translated
-#~ msgid "Load as separate objects"
-#~ msgstr "Tải dưới dạng các vật thể riêng biệt"
-
-# AI Translated
-#~ msgid "Each object in the file is loaded on its own, as OrcaSlicer always loaded AMF files."
-#~ msgstr "Mỗi vật thể trong file được tải riêng, như cách OrcaSlicer vẫn luôn tải file AMF."
-
-# AI Translated
-#~ msgid "The bodies of each group in the file become parts of one object, in their relative positions."
-#~ msgstr "Các khối của mỗi nhóm trong file trở thành các phần của một vật thể, giữ nguyên vị trí tương đối."
-
-# AI Translated
-#~ msgid "Use the body names stored in the file, when there are any. When disabled, the usual OrcaSlicer names are used; existing project names are kept."
-#~ msgstr "Dùng tên khối được lưu trong file, nếu có. Khi tắt, tên OrcaSlicer thông thường sẽ được dùng; tên hiện có trong dự án được giữ nguyên."
-
-# AI Translated
-#~ msgid "Use these choices as defaults next time. The dialog still opens."
-#~ msgstr "Dùng các lựa chọn này làm mặc định cho lần sau. Hộp thoại vẫn sẽ mở."
-
-# AI Translated
-#~ msgid "A name in the file is not valid Unicode. The geometry was not imported."
-#~ msgstr "Một tên trong file không phải Unicode hợp lệ. Dữ liệu hình học chưa được nhập."
-
-# AI Translated
-#~ msgid "Invalid name"
-#~ msgstr "Tên không hợp lệ"
-
-# AI Translated
-#~ msgid "Unsupported characters in names"
-#~ msgstr "Ký tự không được hỗ trợ trong tên"
-
-# AI Translated
-#~ msgid "Some original names contain characters that OrcaSlicer cannot use. Choose how to change them before importing."
-#~ msgstr "Một số tên gốc chứa ký tự mà OrcaSlicer không thể dùng. Hãy chọn cách thay đổi chúng trước khi nhập."
-
-# AI Translated
-#~ msgid "Remove unsupported characters"
-#~ msgstr "Xóa ký tự không được hỗ trợ"
-
-# AI Translated
-#~ msgid "Replace with:"
-#~ msgstr "Thay thế bằng:"
-
-# AI Translated
-#~ msgid "Each unsupported character is replaced with this text. It may be longer than one character."
-#~ msgstr "Mỗi ký tự không được hỗ trợ sẽ được thay thế bằng văn bản này. Văn bản có thể dài hơn một ký tự."
-
-# AI Translated
-#~ msgid "Use this rule as the default next time. The dialog still opens."
-#~ msgstr "Dùng quy tắc này làm mặc định cho lần sau. Hộp thoại vẫn sẽ mở."
-
-# AI Translated
-#~ msgid "Save this rule and apply it without asking next time. You can show this dialog again in Preferences."
-#~ msgstr "Lưu quy tắc này và áp dụng mà không hỏi vào lần sau. Bạn có thể hiển thị lại hộp thoại này trong Tùy chọn."
-
-# AI Translated
-#~ msgid "Enter a non-empty replacement containing only supported characters, or choose removal."
-#~ msgstr "Hãy nhập chuỗi thay thế không rỗng chỉ chứa ký tự được hỗ trợ, hoặc chọn xóa."
-
-# AI Translated
-#, boost-format
-#~ msgid "%1% → %2%"
-#~ msgstr "%1% → %2%"
-
-# AI Translated
-#, boost-format
-#~ msgid "• %1%: %2%"
-#~ msgstr "• %1%: %2%"
-
-# AI Translated
-#, boost-format
-#~ msgid "• %1% — %2%: %3%"
-#~ msgstr "• %1% — %2%: %3%"
-
-# AI Translated
-#, boost-format
-#~ msgid ""
-#~ "The following settings refer to plugins Orca Slicer can't identify on this computer:\n"
-#~ "\n"
-#~ "%1%\n"
-#~ "\n"
-#~ "If you save anyway, the preset won't keep the plugin references for these settings. On another computer, Orca Slicer won't know which plugins to offer, and the settings may not work there."
-#~ msgstr ""
-#~ "Các cài đặt sau tham chiếu đến plugin mà Orca Slicer không nhận dạng được trên máy tính này:\n"
-#~ "\n"
-#~ "%1%\n"
-#~ "\n"
-#~ "Nếu vẫn lưu, cài đặt sẵn sẽ không giữ tham chiếu plugin cho các cài đặt này. Trên máy tính khác, Orca Slicer sẽ không biết cần đề xuất plugin nào, và các cài đặt có thể không hoạt động ở đó."
-
-# AI Translated
-#, boost-format
-#~ msgid ""
-#~ "The following settings refer to plugins Orca Slicer can't identify on this computer:\n"
-#~ "\n"
-#~ "%1%\n"
-#~ "\n"
-#~ "If you save anyway, the project won't keep the plugin references for these settings. On another computer, Orca Slicer won't know which plugins to offer, and the settings may not work there."
-#~ msgstr ""
-#~ "Các cài đặt sau tham chiếu đến plugin mà Orca Slicer không nhận dạng được trên máy tính này:\n"
-#~ "\n"
-#~ "%1%\n"
-#~ "\n"
-#~ "Nếu vẫn lưu, dự án sẽ không giữ tham chiếu plugin cho các cài đặt này. Trên máy tính khác, Orca Slicer sẽ không biết cần đề xuất plugin nào, và các cài đặt có thể không hoạt động ở đó."
-
-# AI Translated
-#~ msgid "Plugin Not Identified"
-#~ msgstr "Không nhận dạng được plugin"
-
-# AI Translated
-#~ msgid "Save anyway"
-#~ msgstr "Vẫn lưu"
-
-# AI Translated
-#, boost-format
-#~ msgid ""
-#~ "The presets being saved refer to plugins Orca Slicer can't identify on this computer:\n"
-#~ "\n"
-#~ "%1%\n"
-#~ "\n"
-#~ "If you save anyway, the presets won't keep the plugin references for these settings. On another computer, Orca Slicer won't know which plugins to offer, and the settings may not work there."
-#~ msgstr ""
-#~ "Các cài đặt sẵn đang được lưu tham chiếu đến plugin mà Orca Slicer không nhận dạng được trên máy tính này:\n"
-#~ "\n"
-#~ "%1%\n"
-#~ "\n"
-#~ "Nếu vẫn lưu, các cài đặt sẵn sẽ không giữ tham chiếu plugin cho các cài đặt này. Trên máy tính khác, Orca Slicer sẽ không biết cần đề xuất plugin nào, và các cài đặt có thể không hoạt động ở đó."
-
-# AI Translated
-#~ msgid "Remove from favorites"
-#~ msgstr "Xóa khỏi yêu thích"
-
-# AI Translated
-#, c-format, boost-format
-#~ msgid ""
-#~ "Plugin \"%s\" is requesting to create the following file:\n"
-#~ "%s"
-#~ msgid_plural ""
-#~ "Plugin \"%s\" is requesting to create the following files:\n"
-#~ "%s"
-#~ msgstr[0] ""
-#~ "Plugin \"%s\" đang yêu cầu tạo file sau:\n"
-#~ "%s"
-
-# AI Translated
-#, c-format, boost-format
-#~ msgid ""
-#~ "Plugin \"%s\" is requesting to delete the following file:\n"
-#~ "%s"
-#~ msgid_plural ""
-#~ "Plugin \"%s\" is requesting to delete the following files:\n"
-#~ "%s"
-#~ msgstr[0] ""
-#~ "Plugin \"%s\" đang yêu cầu xóa file sau:\n"
-#~ "%s"
-
-# AI Translated
-#~ msgid "import SVG failed: could not open svg."
-#~ msgstr "nhập svg thất bại: không thể mở svg."
-
-# AI Translated
-#~ msgid "import SVG failed: could not parse imported svg data."
-#~ msgstr "nhập svg thất bại: không thể phân tích dữ liệu svg đã nhập."

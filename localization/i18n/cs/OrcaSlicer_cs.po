@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Orca Slicer\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-06 11:31-0600\n"
+"POT-Creation-Date: 2026-11-21 12:24+0800\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Jakub Hencl\n"
 "Language-Team: \n"
@@ -1099,8 +1099,10 @@ msgstr "Po ořezu"
 msgid "Cut to parts"
 msgstr "Rozdělit na části"
 
-msgid "Reset cutting plane and remove connectors"
-msgstr "Resetovat řezací rovinu a odstranit konektory"
+# AI Translated
+#. TRN: Part assignments are the upper/lower cut groups changed by right-clicking parts.
+msgid "Reset the cutting plane, remove connectors, and clear part assignments."
+msgstr "Resetovat řezací rovinu, odstranit konektory a zrušit přiřazení dílů."
 
 # AI Translated
 msgid "Reset Cut"
@@ -5832,6 +5834,11 @@ msgid "Enable the prime tower and either disable purging in the prime tower or d
 msgstr "Povolte základní věž a buď vypněte čištění v základní věži, nebo vypněte režim jedné trysky pro více materiálů."
 
 # AI Translated
+# Needs human review: The glossary cell for Prime tower / Wipe tower is unsettled; this follows the catalog's existing wording.
+msgid "The Type 1 prime tower takes the prime volume from each filament, on its Multimaterial page."
+msgstr "Základní věž typu 1 přebírá objem z každého filamentu, z jeho stránky Multimateriál."
+
+# AI Translated
 # Needs human review: Glossary cell for Prime tower / Wipe tower is unsettled (⚠); used 'základní věž' for the prime tower as the catalog does.
 msgid "Enable the prime tower to use this setting."
 msgstr "Pro použití tohoto nastavení povolte základní věž."
@@ -9296,6 +9303,29 @@ msgstr ""
 
 msgid "Error loading shaders"
 msgstr "Chyba při načítání shaderů"
+
+# AI Translated
+#. TRN The OpenGL context could not be made current, so nothing can be drawn in the 3D view.
+msgid "OpenGL could not be activated for the 3D view, so it cannot be shown."
+msgstr "OpenGL nelze aktivovat pro 3D zobrazení, proto jej nelze zobrazit."
+
+# AI Translated
+#. TRN %1% is the name of a graphics card or display adapter as Windows reports it, such as "Microsoft Basic Display Adapter".
+#, boost-format
+msgid "The window is on a display driven by \"%1%\"."
+msgstr "Okno je na displeji, který obsluhuje „%1%“."
+
+# AI Translated
+msgid "Make sure the display adapter driving this window's display is enabled and its driver is installed and up to date."
+msgstr "Ujistěte se, že grafický adaptér obsluhující displej tohoto okna je povolen a jeho ovladač je nainstalován a aktuální."
+
+# AI Translated
+msgid "If the computer has more than one graphics card, connecting the monitor to another one may help."
+msgstr "Pokud má počítač více grafických karet, může pomoci připojit monitor k jiné z nich."
+
+# AI Translated
+msgid "If the problem remains, close any overlay or screen capture software and try again."
+msgstr "Pokud problém přetrvává, zavřete veškerý software pro překryvy nebo záznam obrazovky a zkuste to znovu."
 
 msgctxt "Layers"
 msgid "Top"
@@ -13529,6 +13559,9 @@ msgstr "Koncový G-code filamentu"
 msgid "Wipe tower parameters"
 msgstr "Parametry věže na očištění trysky"
 
+msgid "Prime volume"
+msgstr "Objem základní věže"
+
 # AI Translated
 msgid "Multi Filament"
 msgstr "Více filamentů"
@@ -13611,6 +13644,16 @@ msgstr "Vybraná tiskárna nepodporuje řízení teploty komory."
 # AI Translated
 msgid "Set nonzero volumetric speed coefficients before enabling adaptive volumetric speed."
 msgstr "Před povolením adaptivní objemové rychlosti nastavte nenulové koeficienty objemové rychlosti."
+
+# AI Translated
+# Needs human review: The glossary cell for Prime tower / Wipe tower is unsettled; this follows the catalog's existing wording.
+msgid "Select wipe tower Type 1 in the printer settings to use this setting."
+msgstr "Pro použití tohoto nastavení vyberte v nastavení tiskárny u „Typ čistící věže“ hodnotu „Typ 1“."
+
+# AI Translated
+# Needs human review: The glossary cell for Prime tower / Wipe tower is unsettled; this follows the catalog's existing wording.
+msgid "Select wipe tower Type 1 on a printer whose extruder holds more than one nozzle to use this setting."
+msgstr "Pro použití tohoto nastavení vyberte u „Typ čistící věže“ hodnotu „Typ 1“ na tiskárně, jejíž extruder má více než jednu trysku."
 
 # AI Translated
 msgid "Enable multitool ramming to edit this setting."
@@ -14145,6 +14188,12 @@ msgid "XHF"
 msgstr "XHF"
 
 # AI Translated
+#. TRN Printer settings extruder tab: the extruder's name, e.g. "Extruder 2", and its nozzle flow tag, e.g. "HF".
+#, c-format, boost-format
+msgid "%s: %s"
+msgstr "%s: %s"
+
+# AI Translated
 msgid "No modifications need to be copied."
 msgstr "Není třeba kopírovat žádné úpravy."
 
@@ -14161,6 +14210,12 @@ msgstr "Upravit parametry %s"
 #, c-format, boost-format
 msgid "Do you want to modify the following parameters of the %s to that of the %s?"
 msgstr "Chcete upravit následující parametry %s podle %s?"
+
+# AI Translated
+#. TRN %1% is the extruder (or nozzle variant) the values are copied from, %2% the list of those they are copied to, as the switch names them, e.g. "T2 HF, T3 HF".
+#, boost-format
+msgid "Do you want to copy the following parameters of %1% to %2%?"
+msgstr "Chcete zkopírovat následující parametry %1% do %2%?"
 
 msgid "Click to reset current value and attach to the global value."
 msgstr "Klikněte pro obnovení aktuální hodnoty a navázání na globální hodnotu."
@@ -14311,6 +14366,18 @@ msgid ""
 msgstr ""
 "\n"
 "Můžete zrušit upravené hodnoty předvoleb nebo je přenést do nového projektu."
+
+# AI Translated
+msgid "Click the compare button to see the full value."
+msgstr "Kliknutím na tlačítko porovnání zobrazíte celou hodnotu."
+
+# AI Translated
+msgid "Process settings"
+msgstr "Nastavení procesu"
+
+# AI Translated
+msgid "Compare the full values"
+msgstr "Porovnat celé hodnoty"
 
 msgid "Extruder count"
 msgstr "Počet extrudérů"
@@ -15101,10 +15168,6 @@ msgstr "Otevřít soubor certifikátu CA"
 msgid "HTTPS CA file is optional. It is only needed if you use HTTPS with a self-signed certificate."
 msgstr "Soubor HTTPS CA je volitelný. Je potřeba pouze při použití HTTPS s vlastním podepsaným certifikátem."
 
-# AI Translated
-msgid "This system uses HTTPS certificates from the system Certificate Store or Keychain. To use a custom CA file, import it there."
-msgstr "Tento systém používá HTTPS certifikáty ze systémového úložiště certifikátů nebo Keychainu. Chcete-li použít vlastní soubor CA, importujte jej tam."
-
 msgid "Printer model"
 msgstr "Model tiskárny"
 
@@ -15123,6 +15186,10 @@ msgstr "Připojit"
 
 msgid "Manual Setup"
 msgstr "Manuální nastavení"
+
+# AI Translated
+msgid "This system uses HTTPS certificates from the system Certificate Store or Keychain. To use a custom CA file, import it there."
+msgstr "Tento systém používá HTTPS certifikáty ze systémového úložiště certifikátů nebo Keychainu. Chcete-li použít vlastní soubor CA, importujte jej tam."
 
 msgid "IP and Access Code Verified! You may close the window"
 msgstr "IP adresa a přístupový kód byly ověřeny! Okno můžete zavřít."
@@ -15696,6 +15763,10 @@ msgid "Prime tower is too close to the clumping detection area. There may be col
 msgstr "Základní věž je příliš blízko oblasti detekce shlukování, při tisku může dojít ke kolizím."
 
 # AI Translated
+msgid "The extruder printable areas share no common area, so the prime tower cannot be printed.\n"
+msgstr "Tisknutelné oblasti extruderů nemají žádný společný průnik, takže základní věž nelze vytisknout.\n"
+
+# AI Translated
 # Needs human review: Unsettled glossary term (⚠) "Prime tower / Wipe tower": this entry uses "základní věž"; align it once the term is settled.
 msgid "Prime tower is partially outside the printable area, and it cannot be printed.\n"
 msgstr "Základní věž je částečně mimo tisknutelnou oblast a nelze ji vytisknout.\n"
@@ -15708,6 +15779,21 @@ msgstr "Neplatný doporučený rozsah teplot trysky. Dolní mez musí být niž�
 
 msgid "If you still want to print, you can enable the option in Preferences / Control / Slicing / Remove mixed temperature restriction."
 msgstr "Pokud chcete přesto tisknout, můžete povolit možnost v Nastavení / Ovládání / Slicování / Odebrat omezení smíšených teplot."
+
+msgid "A prime tower requires that all objects have the same layer height."
+msgstr "Základní věž vyžaduje, aby všechny objekty měly stejnou výšku vrstev."
+
+msgid "A prime tower requires that all objects are printed over the same number of raft layers."
+msgstr "Základní věž vyžaduje, aby všechny objekty byly tištěny přes stejný počet raft vrstev."
+
+msgid "The prime tower is only supported for multiple objects if they are printed with the same support_top_z_distance."
+msgstr "Základní věž je u více objektů podporována pouze tehdy, pokud jsou tištěny se stejnou hodnotou support_top_z_distance."
+
+msgid "A prime tower requires that all objects are sliced with the same layer height."
+msgstr "Základní věž vyžaduje, aby všechny objekty byly rozřezány se stejnou výškou vrstev."
+
+msgid "The prime tower is only supported if all objects have the same variable layer height."
+msgstr "Základní věž je podporována pouze v případě, že všechny objekty mají stejnou proměnnou výšku vrstvy."
 
 msgid "No extrusions under current settings."
 msgstr "Při aktuálním nastavení nejsou žádné extruze."
@@ -15847,21 +15933,6 @@ msgstr "Základní věž není podporována při zapnuté adaptivní výšce vrs
 
 msgid "A prime tower requires any “support gap” to be a multiple of layer height."
 msgstr "Základní věž vyžaduje, aby \"support gap\" byl násobkem výšky vrstvy."
-
-msgid "A prime tower requires that all objects have the same layer height."
-msgstr "Základní věž vyžaduje, aby všechny objekty měly stejnou výšku vrstev."
-
-msgid "A prime tower requires that all objects are printed over the same number of raft layers."
-msgstr "Základní věž vyžaduje, aby všechny objekty byly tištěny přes stejný počet raft vrstev."
-
-msgid "The prime tower is only supported for multiple objects if they are printed with the same support_top_z_distance."
-msgstr "Základní věž je u více objektů podporována pouze tehdy, pokud jsou tištěny se stejnou hodnotou support_top_z_distance."
-
-msgid "A prime tower requires that all objects are sliced with the same layer height."
-msgstr "Základní věž vyžaduje, aby všechny objekty byly rozřezány se stejnou výškou vrstev."
-
-msgid "The prime tower is only supported if all objects have the same variable layer height."
-msgstr "Základní věž je podporována pouze v případě, že všechny objekty mají stejnou proměnnou výšku vrstvy."
 
 msgid "One or more object were assigned an extruder that the printer does not have."
 msgstr "Jeden nebo více objektů bylo přiřazeno k extruderu, který tiskárna nemá."
@@ -21640,9 +21711,6 @@ msgstr "Násobitel čištění (rychlý režim)"
 # AI Translated
 msgid "The flush multiplier used in fast purge mode."
 msgstr "Násobitel čištění použitý v rychlém režimu čištění."
-
-msgid "Prime volume"
-msgstr "Objem základní věže"
 
 msgid "This is the volume of material to prime the extruder with on the tower."
 msgstr "Objem materiálu pro načerpání extruderu na základní věži."
@@ -29025,6 +29093,18 @@ msgid "Constraints"
 msgstr "Vazby"
 
 # AI Translated
+msgid "No constraints yet"
+msgstr "Zatím žádné vazby"
+
+# AI Translated
+msgid "Zoom to selection"
+msgstr "Přiblížit na výběr"
+
+# AI Translated
+msgid "Delete constraint"
+msgstr "Odstranit vazbu"
+
+# AI Translated
 msgid "Feature tree"
 msgstr "Strom prvků"
 
@@ -29057,10 +29137,6 @@ msgstr "Posunout dolů"
 # AI Translated
 msgid "Show / hide"
 msgstr "Zobrazit / skrýt"
-
-# AI Translated
-msgid "Zoom to selection"
-msgstr "Přiblížit na výběr"
 
 # AI Translated
 msgid "Check interference — find overlapping bodies"
@@ -29245,6 +29321,12 @@ msgstr[2] "%d stupňů volnosti"
 #, c-format, boost-format
 msgid "Sketch %d"
 msgstr "Náčrt %d"
+
+# AI Translated
+#. TRN %1% is the name of the sketch being edited, as its Feature tree row shows it.
+#, boost-format
+msgid "Editing: %1%   ·   N = look normal to the plane   ·   Confirm or Cancel in the toolbar"
+msgstr "Úpravy: %1%   ·   N = pohled kolmo k rovině   ·   Potvrdit nebo Zrušit na panelu nástrojů"
 
 # AI Translated
 #, c-format, boost-format
@@ -29958,8 +30040,8 @@ msgid "  ·  Esc goes back to Select"
 msgstr "  ·  Esc se vrátí k Výběru"
 
 # AI Translated
-msgid "  ·  click a constraint badge to remove it"
-msgstr "  ·  kliknutím na značku vazby ji odstraníte"
+msgid "  ·  click a constraint badge to select it"
+msgstr "  ·  kliknutím na značku vazby ji vyberete"
 
 # AI Translated
 #, c-format, boost-format
@@ -30428,12 +30510,10 @@ msgid "Constraints (%d)"
 msgstr "Vazby (%d)"
 
 # AI Translated
-msgid "No constraints yet"
-msgstr "Zatím žádné vazby"
-
-# AI Translated
-msgid "Delete constraint"
-msgstr "Odstranit vazbu"
+#. TRN Design tab status line. %1% names the selected sketch constraint, e.g. "Horizontal E0·P0 — E0·P1".
+#, boost-format
+msgid "%1% selected — Delete removes it"
+msgstr "%1% vybráno — Delete ji odstraní"
 
 # AI Translated
 msgid "Constraint deleted"
@@ -39201,359 +39281,3 @@ msgid ""
 msgstr ""
 "Zamezte kroucení\n"
 "Víte, že při tisku materiálů náchylných ke kroucení, jako je ABS, může vhodné zvýšení teploty vyhřívané desky snížit pravděpodobnost kroucení?"
-
-# AI Translated
-#~ msgid "Subdivision mesh"
-#~ msgstr "Zjemnění sítě"
-
-# AI Translated
-#~ msgid "Updates are available for your OrcaCloud plugins."
-#~ msgstr "Pro vaše pluginy OrcaCloud jsou k dispozici aktualizace."
-
-# AI Translated
-#~ msgid "Some imported objects contain modifiers or parts with individual settings. They are shown as assemblies so that these settings remain visible."
-#~ msgstr "Některé importované objekty obsahují modifikátory nebo díly s vlastním nastavením. Zobrazují se jako sestavy, aby tato nastavení zůstala viditelná."
-
-# AI Translated
-#~ msgid "Geometry import"
-#~ msgstr "Import geometrie"
-
-# AI Translated
-#~ msgid "Files"
-#~ msgstr "Soubory"
-
-# AI Translated
-#~ msgid "Folder paths"
-#~ msgstr "Cesty ke složkám"
-
-# AI Translated
-#~ msgid "File import"
-#~ msgstr "Import souborů"
-
-# AI Translated
-#~ msgid "Ask how to handle unsupported characters in imported names"
-#~ msgstr "Ptát se, jak naložit s nepodporovanými znaky v importovaných názvech"
-
-# AI Translated
-#~ msgid "Show the removal or replacement choices when original names contain unsupported characters."
-#~ msgstr "Zobrazit možnosti odstranění nebo nahrazení, když původní názvy obsahují nepodporované znaky."
-
-# AI Translated
-#~ msgid "3MF import"
-#~ msgstr "Import 3MF"
-
-# AI Translated
-#~ msgid "Show options when importing"
-#~ msgstr "Zobrazit možnosti při importu"
-
-# AI Translated
-#~ msgid "Show original-name and sorting options when importing a 3MF without project settings into the current project."
-#~ msgstr "Zobrazit možnosti původních názvů a řazení při importu souboru 3MF bez nastavení projektu do aktuálního projektu."
-
-# AI Translated
-#~ msgid "Keep original names"
-#~ msgstr "Zachovat původní názvy"
-
-# AI Translated
-#~ msgid "Use the body names stored in the imported file when it contains them."
-#~ msgstr "Použít názvy těles uložené v importovaném souboru, pokud je obsahuje."
-
-# AI Translated
-#~ msgid "STEP import"
-#~ msgstr "Import STEP"
-
-# AI Translated
-#~ msgid "Linear deflection"
-#~ msgstr "Lineární odchylka"
-
-# AI Translated
-#~ msgid "Angle deflection"
-#~ msgstr "Úhlová odchylka"
-
-# AI Translated
-#~ msgid "Split into multiple objects"
-#~ msgstr "Rozdělit na více objektů"
-
-# AI Translated
-#~ msgid ""
-#~ "If enabled, compound and compsolid shapes in imported STEP files are split into multiple objects.\n"
-#~ "Used as the default in the import dialog, or directly when the import dialog is disabled.\n"
-#~ "Default: enabled."
-#~ msgstr ""
-#~ "Je-li zapnuto, budou složené (compound) a compsolid tvary v importovaných souborech STEP rozděleny na více objektů.\n"
-#~ "Používá se jako výchozí hodnota v dialogu importu, nebo přímo, pokud je dialog importu vypnutý.\n"
-#~ "Výchozí: zapnuto."
-
-# AI Translated
-#~ msgid "AMF import"
-#~ msgstr "Import AMF"
-
-# AI Translated
-#~ msgid "Show body grouping, original-name and sorting options when importing geometry into the current project."
-#~ msgstr "Zobrazit možnosti seskupení těles, původních názvů a řazení při importu geometrie do aktuálního projektu."
-
-# AI Translated
-#~ msgid "DRC export"
-#~ msgstr "Export DRC"
-
-#~ msgid "Behaviour"
-#~ msgstr "Chování"
-
-# AI Translated
-#~ msgid "Speed dial"
-#~ msgstr "Rychlá volba"
-
-# AI Translated
-#, boost-format
-#~ msgid "%1% is printed later than its place in the object list, to avoid a collision."
-#~ msgstr "Objekt %1% se tiskne později, než odpovídá jeho pořadí v seznamu objektů, aby nedošlo ke kolizi."
-
-# AI Translated
-#, boost-format
-#~ msgid "Spiral vase mode needs no sparse infill, one wall loop and no top shell layers, but the object %1% uses other values, so it will not print as a continuous spiral."
-#~ msgstr "Režim spirálové vázy vyžaduje nulovou hustotu řídké výplně, jednu smyčku stěny a nulový počet vrstev horního pláště, ale objekt %1% používá jiné hodnoty, takže se nevytiskne jako souvislá spirála."
-
-# AI Translated
-#, boost-format
-#~ msgid ""
-#~ "The Adaptive Pressure Advance model of filament %1% contains invalid values.\n"
-#~ "%2%"
-#~ msgstr ""
-#~ "Model Adaptive Pressure Advance filamentu %1% obsahuje neplatné hodnoty.\n"
-#~ "%2%"
-
-# AI Translated
-#~ msgid "Used filament types"
-#~ msgstr "Použité typy filamentů"
-
-# AI Translated
-#~ msgid "Underscore-separated list of all filament types used during the print."
-#~ msgstr "Seznam všech typů filamentů použitých během tisku, oddělených podtržítky."
-
-# AI Translated
-#~ msgid "Loads each body of a multi-body part separately. Needed to keep the bodies' original names."
-#~ msgstr "Načte každé těleso vícetělesového dílu samostatně. Je potřeba k zachování původních názvů těles."
-
-# AI Translated
-#~ msgid "Load as an assembly"
-#~ msgstr "Načíst jako sestavu"
-
-# AI Translated
-#~ msgid "Load as a single object (can be split later)"
-#~ msgstr "Načíst jako jeden objekt (lze rozdělit později)"
-
-# AI Translated
-#~ msgid "The original bodies and names are kept inside the object. Use Split to parts to show them as separate parts."
-#~ msgstr "Původní tělesa a názvy zůstanou uvnitř objektu. Pomocí „Rozdělit na části“ je zobrazíte jako samostatné díly."
-
-# AI Translated
-#~ msgid "Use the body names stored in the file, when there are any. Needs Split compound for parts with several bodies."
-#~ msgstr "Použít názvy těles uložené v souboru, pokud existují. Pro díly s více tělesy je potřeba „Rozdělit compound“."
-
-# AI Translated
-#~ msgid "Sort parts by name"
-#~ msgstr "Seřadit díly podle názvu"
-
-# AI Translated
-#~ msgid "Sort the parts inside each imported assembly in the object list. This does not change the order used for slicing. Available when Keep original names is on."
-#~ msgstr "Seřadit díly uvnitř každé importované sestavy v seznamu objektů. Nemění to pořadí použité při slicování. Dostupné, když je zapnuto „Zachovat původní názvy“."
-
-# AI Translated
-#~ msgid "Don't ask again"
-#~ msgstr "Znovu se neptat"
-
-# AI Translated
-#~ msgid "Save these choices and apply them without asking next time. You can show this dialog again in Preferences."
-#~ msgstr "Uložit tyto volby a příště je použít bez dotazu. Tento dialog můžete znovu zobrazit v Předvolbách."
-
-# AI Translated
-#~ msgid "3MF geometry import options"
-#~ msgstr "Možnosti importu geometrie 3MF"
-
-# AI Translated
-#~ msgid "AMF geometry import options"
-#~ msgstr "Možnosti importu geometrie AMF"
-
-# AI Translated
-#~ msgid "Choose how to name and order the parts of this file."
-#~ msgstr "Zvolte, jak pojmenovat a seřadit díly tohoto souboru."
-
-# AI Translated
-#~ msgid "Choose how to load the bodies in this file."
-#~ msgstr "Zvolte, jak načíst tělesa v tomto souboru."
-
-# AI Translated
-#~ msgid "Load as separate objects"
-#~ msgstr "Načíst jako samostatné objekty"
-
-# AI Translated
-#~ msgid "Each object in the file is loaded on its own, as OrcaSlicer always loaded AMF files."
-#~ msgstr "Každý objekt v souboru se načte samostatně, tak jak OrcaSlicer soubory AMF vždy načítal."
-
-# AI Translated
-#~ msgid "The bodies of each group in the file become parts of one object, in their relative positions."
-#~ msgstr "Tělesa každé skupiny v souboru se stanou díly jednoho objektu ve svých vzájemných polohách."
-
-# AI Translated
-#~ msgid "Use the body names stored in the file, when there are any. When disabled, the usual OrcaSlicer names are used; existing project names are kept."
-#~ msgstr "Použít názvy těles uložené v souboru, pokud existují. Je-li vypnuto, použijí se obvyklé názvy OrcaSlicer; stávající názvy v projektu zůstanou zachovány."
-
-# AI Translated
-#~ msgid "Use these choices as defaults next time. The dialog still opens."
-#~ msgstr "Příště použít tyto volby jako výchozí. Dialog se i tak otevře."
-
-# AI Translated
-#~ msgid "A name in the file is not valid Unicode. The geometry was not imported."
-#~ msgstr "Název v souboru není platný Unicode. Geometrie nebyla importována."
-
-# AI Translated
-#~ msgid "Invalid name"
-#~ msgstr "Neplatný název"
-
-# AI Translated
-#~ msgid "Unsupported characters in names"
-#~ msgstr "Nepodporované znaky v názvech"
-
-# AI Translated
-#~ msgid "Some original names contain characters that OrcaSlicer cannot use. Choose how to change them before importing."
-#~ msgstr "Některé původní názvy obsahují znaky, které OrcaSlicer nemůže použít. Před importem zvolte, jak je změnit."
-
-# AI Translated
-#~ msgid "Remove unsupported characters"
-#~ msgstr "Odstranit nepodporované znaky"
-
-# AI Translated
-#~ msgid "Replace with:"
-#~ msgstr "Nahradit za:"
-
-# AI Translated
-#~ msgid "Each unsupported character is replaced with this text. It may be longer than one character."
-#~ msgstr "Každý nepodporovaný znak se nahradí tímto textem. Text může být delší než jeden znak."
-
-# AI Translated
-#~ msgid "Use this rule as the default next time. The dialog still opens."
-#~ msgstr "Příště použít toto pravidlo jako výchozí. Dialog se i tak otevře."
-
-# AI Translated
-#~ msgid "Save this rule and apply it without asking next time. You can show this dialog again in Preferences."
-#~ msgstr "Uložit toto pravidlo a příště ho použít bez dotazu. Tento dialog můžete znovu zobrazit v Předvolbách."
-
-# AI Translated
-#~ msgid "Enter a non-empty replacement containing only supported characters, or choose removal."
-#~ msgstr "Zadejte neprázdnou náhradu obsahující pouze podporované znaky, nebo zvolte odstranění."
-
-# AI Translated
-#, boost-format
-#~ msgid "%1% → %2%"
-#~ msgstr "%1% → %2%"
-
-# AI Translated
-#, boost-format
-#~ msgid "• %1%: %2%"
-#~ msgstr "• %1%: %2%"
-
-# AI Translated
-#, boost-format
-#~ msgid "• %1% — %2%: %3%"
-#~ msgstr "• %1% – %2%: %3%"
-
-# AI Translated
-#, boost-format
-#~ msgid ""
-#~ "The following settings refer to plugins Orca Slicer can't identify on this computer:\n"
-#~ "\n"
-#~ "%1%\n"
-#~ "\n"
-#~ "If you save anyway, the preset won't keep the plugin references for these settings. On another computer, Orca Slicer won't know which plugins to offer, and the settings may not work there."
-#~ msgstr ""
-#~ "Následující nastavení odkazují na pluginy, které Orca Slicer na tomto počítači nedokáže identifikovat:\n"
-#~ "\n"
-#~ "%1%\n"
-#~ "\n"
-#~ "Pokud přesto uložíte, předvolba si u těchto nastavení odkazy na pluginy neponechá. Na jiném počítači pak Orca Slicer nebude vědět, které pluginy nabídnout, a nastavení tam nemusí fungovat."
-
-# AI Translated
-#, boost-format
-#~ msgid ""
-#~ "The following settings refer to plugins Orca Slicer can't identify on this computer:\n"
-#~ "\n"
-#~ "%1%\n"
-#~ "\n"
-#~ "If you save anyway, the project won't keep the plugin references for these settings. On another computer, Orca Slicer won't know which plugins to offer, and the settings may not work there."
-#~ msgstr ""
-#~ "Následující nastavení odkazují na pluginy, které Orca Slicer na tomto počítači nedokáže identifikovat:\n"
-#~ "\n"
-#~ "%1%\n"
-#~ "\n"
-#~ "Pokud přesto uložíte, projekt si u těchto nastavení odkazy na pluginy neponechá. Na jiném počítači pak Orca Slicer nebude vědět, které pluginy nabídnout, a nastavení tam nemusí fungovat."
-
-# AI Translated
-#~ msgid "Plugin Not Identified"
-#~ msgstr "Plugin nebyl identifikován"
-
-# AI Translated
-#~ msgid "Save anyway"
-#~ msgstr "Přesto uložit"
-
-# AI Translated
-#, boost-format
-#~ msgid ""
-#~ "The presets being saved refer to plugins Orca Slicer can't identify on this computer:\n"
-#~ "\n"
-#~ "%1%\n"
-#~ "\n"
-#~ "If you save anyway, the presets won't keep the plugin references for these settings. On another computer, Orca Slicer won't know which plugins to offer, and the settings may not work there."
-#~ msgstr ""
-#~ "Ukládané předvolby odkazují na pluginy, které Orca Slicer na tomto počítači nedokáže identifikovat:\n"
-#~ "\n"
-#~ "%1%\n"
-#~ "\n"
-#~ "Pokud přesto uložíte, předvolby si u těchto nastavení odkazy na pluginy neponechají. Na jiném počítači pak Orca Slicer nebude vědět, které pluginy nabídnout, a nastavení tam nemusí fungovat."
-
-# AI Translated
-#~ msgid "Remove from favorites"
-#~ msgstr "Odebrat z oblíbených"
-
-# AI Translated
-#, c-format, boost-format
-#~ msgid ""
-#~ "Plugin \"%s\" is requesting to create the following file:\n"
-#~ "%s"
-#~ msgid_plural ""
-#~ "Plugin \"%s\" is requesting to create the following files:\n"
-#~ "%s"
-#~ msgstr[0] ""
-#~ "Plugin „%s“ žádá o vytvoření následujícího souboru:\n"
-#~ "%s"
-#~ msgstr[1] ""
-#~ "Plugin „%s“ žádá o vytvoření následujících souborů:\n"
-#~ "%s"
-#~ msgstr[2] ""
-#~ "Plugin „%s“ žádá o vytvoření následujících souborů:\n"
-#~ "%s"
-
-# AI Translated
-#, c-format, boost-format
-#~ msgid ""
-#~ "Plugin \"%s\" is requesting to delete the following file:\n"
-#~ "%s"
-#~ msgid_plural ""
-#~ "Plugin \"%s\" is requesting to delete the following files:\n"
-#~ "%s"
-#~ msgstr[0] ""
-#~ "Plugin „%s“ žádá o odstranění následujícího souboru:\n"
-#~ "%s"
-#~ msgstr[1] ""
-#~ "Plugin „%s“ žádá o odstranění následujících souborů:\n"
-#~ "%s"
-#~ msgstr[2] ""
-#~ "Plugin „%s“ žádá o odstranění následujících souborů:\n"
-#~ "%s"
-
-# AI Translated
-#~ msgid "import SVG failed: could not open svg."
-#~ msgstr "import SVG selhal: soubor SVG nelze otevřít."
-
-# AI Translated
-#~ msgid "import SVG failed: could not parse imported svg data."
-#~ msgstr "import SVG selhal: importovaná data SVG nelze zpracovat."

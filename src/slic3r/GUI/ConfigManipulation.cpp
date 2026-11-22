@@ -1222,6 +1222,8 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, in
     toggle_line("toolchange_cyclic_first_layer", use_cyclic_ordering, -1, cyclic_order_reason);
 
     toggle_line("prime_volume",have_prime_tower && (!purge_in_primetower || !bSEMM), -1, _L("Enable the prime tower and either disable purging in the prime tower or disable single extruder multimaterial mode."));
+    // Orca: the Type 1 tower takes the prime volume of each filament instead.
+    toggle_field("prime_volume", supports_wipe_tower_2, -1, _L("The Type 1 prime tower takes the prime volume from each filament, on its Multimaterial page."));
 
     for (auto el : {"flush_into_infill", "flush_into_support", "flush_into_objects"})
         toggle_field(el, have_prime_tower, -1, _L("Enable the prime tower to use this setting."));
@@ -1349,7 +1351,7 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, in
     for (auto el : { "lateral_lattice_angle_1", "lateral_lattice_angle_2"})
         toggle_line(el, lattice_options, -1, _L("Select the Lateral Lattice sparse infill pattern to use this setting."));
 
-    bool lightning_options = config->opt_enum<InfillPattern>("sparse_infill_pattern") == InfillPattern::ipLightning;
+    bool lightning_options = config->opt_enum<InfillPattern>("sparse_infill_pattern") == InfillPattern::ipLightning && have_infill;
     for (auto el : { "lightning_overhang_angle", "lightning_prune_angle", "lightning_straightening_angle" })
         toggle_line(el, lightning_options, -1, _L("Select the Lightning sparse infill pattern to use this setting."));
         

@@ -2,6 +2,7 @@ get_filename_component(_TEST_NAME ${CMAKE_CURRENT_LIST_DIR} NAME)
 add_executable(${_TEST_NAME}_tests
     ${_TEST_NAME}_tests_main.cpp
     test_bambu_filament_ids.cpp
+    test_bbl_cert_dir.cpp
     test_bed_exclusion_fields.cpp
     test_cloud_delete_queue.cpp
     test_config_value_formatter.cpp
@@ -13,6 +14,7 @@ add_executable(${_TEST_NAME}_tests
     test_network_discovery.cpp
     test_filament_bitmap_utils.cpp
     test_colour_picker_field.cpp
+    test_field_number_text.cpp
     test_filament_color_picker.cpp
     test_ams_materials_setting.cpp
     test_gcode_preview_colors.cpp
