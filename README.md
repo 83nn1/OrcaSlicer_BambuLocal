@@ -41,11 +41,11 @@ Nicht möglich ist nur, was zwingend über die Server von Bambu Lab läuft: die 
 - **X1C, X2D und H2C** (sowie andere X1- und H2-Drucker) bringen im LAN-Modus einen eigenen Dateidienst mit, über den schon das Original Speicher-Tab und Objekte überspringen anbietet. Der Fork nutzt diesen Weg weiter und weicht nur auf FTPS aus, wenn der Dateidienst nicht erreichbar ist. Automatisch verbinden funktioniert mit jedem Modell. Den neuen H3C unterstützt OrcaSlicer selbst noch nicht. An diesen Druckern ist nichts getestet, Details unter [Druckermodelle](https://github.com/83nn1/OrcaSlicer_BambuLocal/wiki/Druckermodelle).
 - Für Windows (x64 und ARM64), macOS (Apple Silicon und Intel) und Linux (x86_64 und ARM64). Getestet wird unter Windows, die macOS- und Linux-Builds entstehen aus demselben Code, sind aber nicht an einem Drucker geprüft.
 
-Drucker im Cloud-Modus verhalten sich wie im Original-OrcaSlicer. Abgesehen von den oben genannten Funktionen ist der Fork ein ganz normales OrcaSlicer und wird regelmäßig mit dem Original abgeglichen. Aktuelle Basis ist OrcaSlicer 2.5.0.
+Drucker im Cloud-Modus verhalten sich wie im Original-OrcaSlicer. Abgesehen von den oben genannten Funktionen ist der Fork ein ganz normales OrcaSlicer und wird regelmäßig mit dem Original abgeglichen. Aktuelle Basis ist OrcaSlicer 2.5.2.
 
 ## Download
 
-Der letzte gültige Build steht unter [Releases](https://github.com/83nn1/OrcaSlicer_BambuLocal/releases/latest), aktuell **V0.9.1** auf Basis von OrcaSlicer 2.5.0. Welche Version installiert ist, zeigen das Startfenster und *Hilfe → Über*. Direkt herunterladen:
+Der letzte gültige Build steht unter [Releases](https://github.com/83nn1/OrcaSlicer_BambuLocal/releases/latest), aktuell **V0.14.1** auf Basis von OrcaSlicer 2.5.2. Welche Version installiert ist, zeigen das Startfenster und *Hilfe → Über*. Direkt herunterladen:
 
 | Windows | Installer | Portable |
 |---|---|---|
