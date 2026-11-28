@@ -5,6 +5,7 @@
 #include <catch2/catch_message.hpp>
 #include <catch2/matchers/catch_matchers.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 #include "libslic3r/GCode/GCodeProcessor.hpp"
 #include "libslic3r/GCodeReader.hpp"
 #include "libslic3r/TriangleSelector.hpp"
@@ -85,6 +86,49 @@ TEST_CASE("Painted filaments slice when the display palette is shorter than the 
         second_filament_present |= !layer[1].empty();
     }
     REQUIRE(second_filament_present);
+}
+
+TEST_CASE("Spiral vase mode prints a model painted all over with a filament other than its own", "[MultiFilament]")
+{
+    // Painting the whole cube leaves only filament 2. Painting half of it, or limiting the paint to a band near the
+    // walls, leaves two filaments, which spiral vase can't print. Beam interlocking turns the band off.
+    const bool all_over = GENERATE(true, false);
+    const std::string band_key = GENERATE("", "mmu_segmented_region_max_width", "mmu_segmented_region_interlocking_depth");
+    const bool beam = GENERATE(false, true);
+    CAPTURE(all_over, band_key, beam);
+    auto config = multifilament_config(2, {
+        { "spiral_mode",        1 },
+        { "enable_prime_tower", 0 },
+        { "skirt_loops",        0 },
+        { "brim_type",          "no_brim" },
+        { "gcode_comments",     1 },
+        { "layer_change_gcode", "G92 E0" },
+        { "interlocking_beam",  beam },
+    });
+    if (!band_key.empty())
+        config.set_deserialize_strict(band_key, "1");
+    Print print;
+    Model model;
+    init_print({cube(20)}, print, model, config);
+    ModelVolume *volume = model.objects.front()->volumes.front();
+    TriangleSelector selector(volume->mesh());
+    const int facets = int(volume->mesh().its.indices.size());
+    for (int facet = 0; facet < (all_over ? facets : facets / 2); ++facet)
+        selector.set_facet(facet, EnforcerBlockerType::Extruder2);
+    REQUIRE(volume->mmu_segmentation_facets.set(selector));
+    CHECK(volume->is_mm_painted_everywhere() == all_over);
+    print.apply(model, config);
+
+    const std::string error = print.validate().string;
+    if (!all_over || (!band_key.empty() && !beam)) {
+        CHECK_THAT(error, Catch::Matchers::ContainsSubstring("more than one material"));
+        return;
+    }
+    INFO(error);
+    REQUIRE(error.empty());
+    const std::string gcode = Test::gcode(print);
+    CHECK(tools_for_role(gcode, "perimeter") == std::set<int>{ 1 });
+    CHECK(tools_for_role(gcode, "infill") == std::set<int>{ 1 });
 }
 
 // X where the nozzle sits while each tagged _WAIT_FOR_TEMP_ON_WIPE_TOWER M109 blocks:
@@ -1078,7 +1122,6 @@ TEST_CASE("Multi-extruder slice stays in bounds with a short max_layer_height", 
     REQUIRE_FALSE(print.objects().front()->layers().empty());
 }
 
-
 // Shared IMEX printer geometry: 7 logical extruders across 4 physical heads.
 // physical_extruder_map is only honoured when its length matches the nozzle count
 // (PrintApply feeds effective_physical_extruder_map the nozzle_diameter size), so the
@@ -1499,8 +1542,8 @@ TEST_CASE("An IMEX plate whose filament never routes to the Primary tool is bloc
     const StringObjectException err = print.validate(&warnings);
 
     REQUIRE_FALSE(err.string.empty());
-    CHECK(err.string.find("T0") != std::string::npos);   // the declared primary
-    CHECK(err.string.find("T2") != std::string::npos);   // where the filament actually lives
+    CHECK(err.string.find("T1") != std::string::npos);   // the declared primary
+    CHECK(err.string.find("T3") != std::string::npos);   // where the filament actually lives
 }
 
 // A mixed filament is blended at the nozzle by its component toolheads, which a parallel
@@ -2047,6 +2090,33 @@ TEST_CASE("The prime tower follows an object switching filaments within one appl
     }
 }
 
+TEST_CASE("The prime tower follows the number of printable copies in a sequential print", "[MultiFilament][Regression]")
+{
+    auto config = multifilament_config(2, {
+        { "print_sequence", "by object" }, { "enable_prime_tower", 1 }, { "outer_wall_filament_id", 2 },
+        { "timelapse_type", 0 }, { "enable_wrapping_detection", 0 }
+    });
+    Print print;
+    Model model;
+    init_print(std::vector<TriangleMesh>{cube(10)}, print, model, config, nullptr, true, 2);
+    REQUIRE(print.objects().size() == 1);
+    REQUIRE(print.num_object_instances() == 2);
+    REQUIRE(print.extruders().size() == 2);
+    CHECK_FALSE(print.has_wipe_tower());
+
+    ModelInstance *copy = model.objects.front()->instances.back();
+    copy->printable = false;
+    print.apply(model, config);
+    REQUIRE(print.num_object_instances() == 1);
+    CHECK(print.has_wipe_tower());
+
+    copy->printable = true;
+    config.set_deserialize_strict("print_sequence", "by layer");
+    print.apply(model, config);
+    REQUIRE(print.num_object_instances() == 2);
+    CHECK(print.has_wipe_tower());
+}
+
 // The tower turns independent_support_layer_height off, which rounds the raft gap up to a whole layer
 // and lifts the objects. Objects sliced before the move have to be sliced again.
 TEST_CASE("Objects above a raft are re-sliced when a filament switch turns the prime tower on", "[MultiFilament]")
@@ -2370,6 +2440,19 @@ TEST_CASE("A filament_map within the nozzle range is not changed", "[MultiFilame
     CHECK(print.config().filament_map.values == std::vector<int>({ 1, 2 }));
 }
 
+TEST_CASE("Filament maps longer than the filament list are cut to the filament count", "[MultiFilament]")
+{
+    DynamicPrintConfig config = two_nozzle_map_config("1,2,1,1");
+    config.set_key_value("filament_volume_map", new ConfigOptionInts({ 0, 0, 0, 0 }));
+    config.set_key_value("filament_nozzle_map", new ConfigOptionInts({ 0, 1, 0, 0 }));
+    Print print;
+    init_and_process_print({ cube(20) }, print, config);
+    CHECK(print.config().filament_map.values == std::vector<int>({ 1, 2 }));
+    CHECK(print.config().filament_volume_map.values.size() == 2);
+    CHECK(print.config().filament_nozzle_map.values.size() == 2);
+    CHECK(gcode_body(slice({ cube(20) }, config)) == gcode_body(slice({ cube(20) }, two_nozzle_map_config("1,2"))));
+}
+
 // The map value is a firmware tool number, so a value outside the nozzle range must not index the
 // per-nozzle first-filament table.
 TEST_CASE("A physical_extruder_map entry outside the nozzle range still exports", "[MultiFilament]")
@@ -2380,4 +2463,101 @@ TEST_CASE("A physical_extruder_map entry outside the nozzle range still exports"
         CHECK(gcode.find("; CONFIG_BLOCK_END") != std::string::npos);
         CHECK(gcode.find("; EXECUTABLE_BLOCK_END") != std::string::npos);
     }
+}
+
+// Regression for #14753: emit M104 after T0 in single-extruder MM to override firmware/CFS reset.
+TEST_CASE("Single-extruder MM emits M104 after T0 toolchange", "[MultiFilament]")
+{
+    const int expected_temp = 240;
+    const std::string gcode = slice({ cube(20) },
+        multifilament_config(2, {
+            { "nozzle_temperature",               std::to_string(expected_temp) + "," + std::to_string(expected_temp) },
+            { "nozzle_temperature_initial_layer", std::to_string(expected_temp) + "," + std::to_string(expected_temp) },
+            { "machine_start_gcode",              "" },
+            { "enable_prime_tower",               "0" },
+        }));
+
+    bool found_t0 = false;
+    std::string first_cmd_after_t0;
+    int first_temp_after_t0 = -1;
+    GCodeReader reader;
+    reader.parse_buffer(gcode, [&](GCodeReader& self, const GCodeReader::GCodeLine& line) {
+        const std::string cmd(line.cmd());
+        if (cmd.empty())
+            return;
+        if (!found_t0) {
+            if (cmd == "T0")
+                found_t0 = true;
+        } else {
+            first_cmd_after_t0 = cmd;
+            float s_val = 0;
+            if (line.has_value('S', s_val))
+                first_temp_after_t0 = int(s_val);
+            self.quit_parsing();
+        }
+    });
+
+    REQUIRE(found_t0);
+    REQUIRE(first_cmd_after_t0 == "M104");
+    REQUIRE(first_temp_after_t0 == expected_temp);
+}
+
+// Single-filament prints must not get an M104 after start G-code when no T command was written.
+TEST_CASE("Single-filament print does not emit M104 after start G-code", "[MultiFilament]")
+{
+    const std::string gcode = slice({ cube(20) },
+        multifilament_config(1, {
+            { "machine_start_gcode", "; START_GCODE_END\n" },
+            { "enable_prime_tower",  "0" },
+        }));
+
+    const size_t start_pos = gcode.find("; START_GCODE_END");
+    REQUIRE(start_pos != std::string::npos);
+    const size_t layer_pos = gcode.find(";LAYER_CHANGE", start_pos);
+    REQUIRE(layer_pos != std::string::npos);
+
+    const std::string between = gcode.substr(start_pos, layer_pos - start_pos);
+    CHECK(between.find("M104") == std::string::npos);
+    CHECK(between.find("M109") == std::string::npos);
+    CHECK(between.find("T0") == std::string::npos);
+}
+
+// A custom M104 in filament start G-code must be preserved after T0 and the slicer's default M104.
+TEST_CASE("Custom M104 in filament start G-code wins on a T0-only print", "[MultiFilament]")
+{
+    const int slicer_temp = 240;
+    const int custom_temp = 255;
+    const std::string gcode = slice({ cube(20) },
+        multifilament_config(2, {
+            { "nozzle_temperature",               std::to_string(slicer_temp) + "," + std::to_string(slicer_temp) },
+            { "nozzle_temperature_initial_layer", std::to_string(slicer_temp) + "," + std::to_string(slicer_temp) },
+            { "filament_start_gcode",             std::string("M104 S") + std::to_string(custom_temp) + "\n" },
+            { "machine_start_gcode",              "" },
+            { "enable_prime_tower",               "0" },
+        }));
+
+    bool found_t0 = false;
+    std::vector<int> temps_after_t0;
+    GCodeReader reader;
+    reader.parse_buffer(gcode, [&](GCodeReader& self, const GCodeReader::GCodeLine& line) {
+        const std::string cmd(line.cmd());
+        if (cmd == ";LAYER_CHANGE" || line.comment() == "LAYER_CHANGE") {
+            if (found_t0)
+                self.quit_parsing();
+            return;
+        }
+        if (!found_t0) {
+            if (cmd == "T0")
+                found_t0 = true;
+        } else if (cmd == "M104" || cmd == "M109") {
+            float s_val = 0;
+            if (line.has_value('S', s_val))
+                temps_after_t0.push_back(int(s_val));
+        }
+    });
+
+    REQUIRE(found_t0);
+    REQUIRE(temps_after_t0.size() >= 2);
+    CHECK(temps_after_t0.front() == slicer_temp);
+    CHECK(temps_after_t0.back() == custom_temp);
 }

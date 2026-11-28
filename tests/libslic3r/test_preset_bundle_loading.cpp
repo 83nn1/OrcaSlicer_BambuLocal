@@ -392,6 +392,18 @@ TEST_CASE("Printer extruder count tolerates missing nozzle diameter", "[Preset][
     CHECK(bundle.get_printer_extruder_count() == 2);
 }
 
+TEST_CASE("A preset bundle builds its full config before its presets load", "[Preset][Bundle][Regression]")
+{
+    PresetBundle bundle;
+    REQUIRE(bundle.filament_presets.empty());
+    bundle.filaments.get_edited_preset().config.set_key_value("filament_type", new ConfigOptionStrings({ "PETG" }));
+
+    const DynamicPrintConfig config = bundle.full_config();
+
+    REQUIRE(config.has("filament_type"));
+    CHECK(config.option<ConfigOptionStrings>("filament_type")->values == std::vector<std::string>{ "PETG" });
+}
+
 // A per-variant key that no profile in the chain sets keeps the length of the one-nozzle root. The
 // inherited printer must still have a value for every variant in its own variant list.
 TEST_CASE("An inherited printer's per-variant values cover every variant it lists", "[Preset][Bundle][Regression]")
@@ -1255,6 +1267,106 @@ TEST_CASE("A project filament storing one value for a per-variant key applies it
     REQUIRE(loaded != nullptr);
     CHECK(loaded->config.option<ConfigOptionStrings>("adaptive_pressure_advance_model")->values == std::vector<std::string>{model, model});
     check_double_vector(loaded->config.option<ConfigOptionFloats>("pressure_advance")->values, {0.016, 0.016});
+}
+
+TEST_CASE("A project's edited process keeps the preset's compatible printers unless the project stores a list", "[Preset][Bundle][Regression]")
+{
+    enum class Project { NoList, CompatiblePrintersKey, StoredList };
+    const Project     project        = GENERATE(Project::NoList, Project::CompatiblePrintersKey, Project::StoredList);
+    const bool        inherits_system = GENERATE(false, true);
+    const std::string local_printer  = GENERATE(as<std::string>{}, "My Printer", "Other Printer");
+    CAPTURE(project, inherits_system, local_printer);
+    PresetBundle bundle;
+    add_inmemory_preset(bundle.printers, "My Printer");
+    if (inherits_system) {
+        Preset &parent   = add_inmemory_preset(bundle.prints, "System Process");
+        parent.is_system = true;
+        parent.config.option<ConfigOptionStrings>("compatible_printers", true)->values = {"System Printer"};
+    }
+    Preset &user = add_inmemory_preset(bundle.prints, "My Process", inherits_system ? "System Process" : "");
+    user.config.option<ConfigOptionStrings>("compatible_printers", true)->values = {local_printer};
+    user.config.option<ConfigOptionFloat>("layer_height", true)->value          = 0.2;
+
+    DynamicPrintConfig config = published_pla_file_config();
+    config.opt_string("print_settings_id", true)        = "My Process";
+    config.opt_string("printer_settings_id", true)      = "My Printer";
+    config.opt<ConfigOptionFloat>("layer_height")->value = 0.28;
+    if (project == Project::CompatiblePrintersKey)
+        config.option<ConfigOptionStrings>("compatible_printers", true)->values = {"Other Printer"};
+    if (project == Project::StoredList)
+        config.option<ConfigOptionStrings>("print_compatible_printers", true)->values = {"Project Printer"};
+    if (inherits_system) {
+        config.set_key_value("inherits_group", new ConfigOptionStrings({"System Process", "", ""}));
+        config.set_key_value("different_settings_to_system",
+                             new ConfigOptionStrings({project == Project::StoredList ? "compatible_printers;layer_height" : "layer_height", "", ""}));
+    }
+    Preset::normalize(config);
+    bundle.load_config_model("test.3mf", std::move(config));
+
+    const Preset &edited = bundle.prints.get_edited_preset();
+    REQUIRE(edited.name == "My Process");
+    CHECK_THAT(edited.config.opt_float("layer_height"), Catch::Matchers::WithinAbs(0.28, 1e-6));
+    const std::vector<std::string> expected = project == Project::StoredList     ? std::vector<std::string>{"Project Printer"} :
+                                              local_printer == "My Printer"      ? std::vector<std::string>{local_printer} :
+                                                                                   std::vector<std::string>{};
+    CHECK(edited.config.option<ConfigOptionStrings>("compatible_printers")->values == expected);
+}
+
+TEST_CASE("A project's edited process missing locally loads over its system parent with the project's empty compatible printers", "[Preset][Bundle][Regression]")
+{
+    PresetBundle bundle;
+    Preset      &parent = add_inmemory_preset(bundle.prints, "System Process");
+    parent.is_system    = true;
+    parent.config.option<ConfigOptionStrings>("compatible_printers", true)->values = {"System Printer"};
+    parent.config.option<ConfigOptionFloat>("layer_height", true)->value          = 0.2;
+
+    DynamicPrintConfig config = published_pla_file_config();
+    config.opt_string("print_settings_id", true)        = "Their Process";
+    config.opt<ConfigOptionFloat>("layer_height")->value = 0.28;
+    config.set_key_value("inherits_group", new ConfigOptionStrings({"System Process", "", ""}));
+    config.set_key_value("different_settings_to_system", new ConfigOptionStrings({"compatible_printers;layer_height", "", ""}));
+    Preset::normalize(config);
+    bundle.load_config_model("test.3mf", std::move(config));
+
+    const Preset &edited = bundle.prints.get_edited_preset();
+    REQUIRE(edited.name == "System Process");
+    CHECK_THAT(edited.config.opt_float("layer_height"), Catch::Matchers::WithinAbs(0.28, 1e-6));
+    CHECK(edited.config.option<ConfigOptionStrings>("compatible_printers")->values.empty());
+}
+
+TEST_CASE("A project's edited filament keeps the preset's compatible printers and processes", "[Preset][Bundle][Regression]")
+{
+    enum class Load { FirstSlotSelected, FirstSlotParentSelected, LaterSlotEmbedded, LaterSlotCopied };
+    const Load load = GENERATE(Load::FirstSlotSelected, Load::FirstSlotParentSelected, Load::LaterSlotEmbedded, Load::LaterSlotCopied);
+    CAPTURE(load);
+    const bool first_slot = load == Load::FirstSlotSelected || load == Load::FirstSlotParentSelected;
+    // For FirstSlotParentSelected only the parent the project inherits from is loaded, so it is the one selected.
+    const std::string preset_name = load == Load::FirstSlotParentSelected ? "Parent PLA" : "My PLA";
+    PresetCollection filaments(Preset::TYPE_FILAMENT, Preset::filament_options(),
+                               static_cast<const PrintRegionConfig &>(FullPrintConfig::defaults()));
+    Preset &user = add_inmemory_preset(filaments, preset_name);
+    user.is_project_embedded = load == Load::LaterSlotEmbedded;
+    user.config.option<ConfigOptionStrings>("compatible_printers", true)->values = {"My Printer"};
+    user.config.option<ConfigOptionStrings>("compatible_prints", true)->values   = {"My Process"};
+    user.config.option<ConfigOptionInts>("nozzle_temperature", true)->values     = {210};
+
+    DynamicPrintConfig project(user.config);
+    project.option<ConfigOptionStrings>("compatible_printers")->values.clear();
+    project.option<ConfigOptionStrings>("compatible_prints")->values.clear();
+    project.option<ConfigOptionInts>("nozzle_temperature")->values = {225};
+    if (load == Load::FirstSlotParentSelected)
+        project.option<ConfigOptionString>(BBL_JSON_KEY_INHERITS)->value = preset_name;
+
+    const Preset *loaded = filaments.load_external_preset("test.3mf", "test.3mf", "My PLA", project, {},
+                                                          first_slot ? PresetCollection::LoadAndSelect::Always :
+                                                                       PresetCollection::LoadAndSelect::OnlyIfModified).first;
+    REQUIRE(loaded != nullptr);
+
+    const Preset &result = first_slot ? filaments.get_edited_preset() : *loaded;
+    REQUIRE(result.name == (load == Load::LaterSlotCopied ? "My PLA(test.3mf)" : preset_name));
+    CHECK(result.config.option<ConfigOptionInts>("nozzle_temperature")->values == std::vector<int>{225});
+    CHECK(result.config.option<ConfigOptionStrings>("compatible_printers")->values == std::vector<std::string>{"My Printer"});
+    CHECK(result.config.option<ConfigOptionStrings>("compatible_prints")->values == std::vector<std::string>{"My Process"});
 }
 
 TEST_CASE("Repeated loads of a user preset directory produce the same presets", "[Preset][Bundle]")

@@ -782,7 +782,7 @@ jobs:
           test_repo_dir="${{ runner.temp }}/orca-test-repo"
           rm -rf "$test_repo_dir"
           # BambuLocal: pin the test suite to a commit that matches our upstream
-          # base (v2.5.2, which has the fix fa77189 un-xfails). Later commits only
+          # base (v2.5.3, which has the fix fa77189 un-xfails). Later commits only
           # refresh the CLI snapshot from upstream main. Bump this on the next
           # upstream sync.
           git clone https://github.com/OrcaSlicer/orca-test-repo.git "$test_repo_dir"
