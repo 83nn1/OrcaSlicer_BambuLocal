@@ -154,6 +154,20 @@ double nozzle_diameter_for_filament(const PrintConfig& config, int filament_id, 
     return config.nozzle_diameter.get_at(extruder - 1);
 }
 
+ConfigOptionInts effective_physical_extruder_map(const ConfigOptionInts* explicit_pem, int nozzle_count)
+{
+    // One entry per logical extruder, so a profile has authored a map only when its length
+    // matches. The single-element PrintConfig default does not, and is replaced rather than
+    // treated as a one-extruder machine.
+    if (explicit_pem && nozzle_count > 0 && (int) explicit_pem->values.size() == nozzle_count)
+        return *explicit_pem;
+
+    ConfigOptionInts derived;
+    derived.values.resize(std::max(nozzle_count, 1));
+    std::iota(derived.values.begin(), derived.values.end(), 0);
+    return derived;
+}
+
 
 // Orca: input shaping values types by flavor
 std::vector<std::string> get_shaper_type_values_for_flavor(GCodeFlavor flavor)
@@ -7062,8 +7076,8 @@ void PrintConfigDef::init_fff_params()
     def->set_default_value(new ConfigOptionInt(2));
 
     def = this->add("imex_tool_layout", coEnum);
-    def->label = L("Tool 0 Position");
-    def->tooltip = L("Physical position on the bed where tool T0 (index 0) is located. "
+    def->label = L("Tool 1 Position");
+    def->tooltip = L("Physical position on the bed where tool T1 is located. "
                      "Determines how tool indices map to bed zones. "
                      "For single-gantry setups (IDEX) only left/right matters; "
                      "for dual-gantry setups (IQEX) all four corners are selectable "
